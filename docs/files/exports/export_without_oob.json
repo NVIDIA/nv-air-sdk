@@ -1,0 +1,29 @@
+{
+  "format": "JSON",
+  "name": "JSON Sim",
+  "ztp": null,
+  "content": {
+    "nodes": {
+      "node1": {
+        "cpu": 2,
+        "memory": 1024,
+        "storage": 10,
+        "positioning": {
+          "x": 0,
+          "y": 0
+        },
+        "os": "generic/ubuntu2204",
+        "features": {
+          "uefi": false,
+          "tpm": false
+        },
+        "pxehost": false,
+        "secureboot": false,
+        "oob": false,
+        "network_pci": {}
+      }
+    },
+    "links": [],
+    "oob": false
+  }
+}

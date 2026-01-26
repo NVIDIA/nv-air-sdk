@@ -1,0 +1,19 @@
+.vscode
+venv
+.venv
+.idea
+.env
+.scratch
+*pycache*
+.python-version
+# Coverage files
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+# Cursor settings
+.cursorrules
+.cursor
+.ruff_cache
+.mypy_cache
+.coverage

@@ -1,0 +1,40 @@
+target-version = "py310" # Target Python version
+line-length = 90
+
+# Include Python files and Jupyter notebooks
+include = ["*.py", "*.pyi", "*.ipynb"]
+
+[lint]
+# The full list of rules is here: https://docs.astral.sh/ruff/rules/
+extend-select = [
+    # Basic Python errors
+    "E",
+    # Additional flake8
+    "T",
+    # Sort import statements
+    "I001",
+    # Use absolute imports instead of relative imports
+    "TID252",
+    # no-blank-line-after-function
+    "D202",
+    "PT",
+]
+# Ignore the following codes for all files.
+# We should work towards decreasing the items in this list.
+ignore = [
+    'DJ008', # Model does not have __str__ method.
+    'PT011', # `Exception` is too broad.
+]
+
+[lint.isort]
+known-first-party = ["air"]
+
+[lint.per-file-ignores]
+"docs/*.ipynb" = ["T201"]
+
+[format]
+# Use single quotes for non-triple-quoted strings.
+quote-style = "single"
+# Format code blocks in docstrings
+docstring-code-format = true
+docstring-code-line-length = 104
