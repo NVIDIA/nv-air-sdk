@@ -46,6 +46,8 @@ We do not support NGC service keys yet.
 
 MIT License - see LICENSE file for details
 
+This project will download and install additional third-party open source software projects. Review the license terms of these open source projects before use.
+
 ## Contributing
 
 This project is currently not accepting contributions.
