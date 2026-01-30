@@ -42,3 +42,10 @@ And to use option 2 you will need to have the [NGC CLI](https://org.stg.ngc.nvid
 
 We do not support NGC service keys yet.
 
+## License
+
+MIT License - see LICENSE file for details
+
+## Contributing
+
+This project is currently not accepting contributions.
