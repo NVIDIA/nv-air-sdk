@@ -136,7 +136,8 @@ class Client(requests.Session):
         device_login_data = {'deviceId': device_id, 'email': email}
 
         login_response = requests.post(
-            const.NGC_DEVICE_LOGIN_URL.geturl(), json=device_login_data
+            const.get_ngc_device_login_url(self.api_url).geturl(),
+            json=device_login_data,
         )
 
         if login_response.status_code != 200:
@@ -164,7 +165,7 @@ class Client(requests.Session):
         )
 
         # Use session key to get token
-        token_url = const.NGC_TOKEN_URL
+        token_url = const.get_ngc_token_url(self.api_url)
         token_headers = {
             'Authorization': f'Bearer {session_key}',
             'X-Device-Id': device_id,

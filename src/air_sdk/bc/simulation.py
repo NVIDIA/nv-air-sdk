@@ -144,7 +144,7 @@ class SimulationCompatMixin(AirModelCompatMixin):
     }
 
     # Fields and filters that were removed in v3
-    _REMOVED_FIELDS = ['metadata', 'organization', 'preferred_worker', 'write_ok']
+    _REMOVED_FIELDS = ['organization', 'preferred_worker', 'write_ok']
 
     def __post_init__(self, _api: Any) -> None:
         """Convert state field to SimulationState for BC comparisons."""
@@ -202,9 +202,11 @@ class SimulationCompatMixin(AirModelCompatMixin):
         # 1. Disable NetQ (if needed)
         # 2. Enable/disable OOB
         # 3. Enable NetQ (if needed)
-        auto_oob_enabled, disable_auto_oob_dhcp, auto_netq_enabled = (
-            _extract_oob_netq_fields(kwargs)
-        )
+        (
+            auto_oob_enabled,
+            disable_auto_oob_dhcp,
+            auto_netq_enabled,
+        ) = _extract_oob_netq_fields(kwargs)
 
         # Step 1: Disable NetQ first (if disabling) since NetQ requires OOB
         if auto_netq_enabled is False:
@@ -480,9 +482,11 @@ class SimulationEndpointAPICompatMixin:
         # 1. Disable NetQ (if needed)
         # 2. Enable/disable OOB
         # 3. Enable NetQ (if needed)
-        auto_oob_enabled, disable_auto_oob_dhcp, auto_netq_enabled = (
-            _extract_oob_netq_fields(kwargs)
-        )
+        (
+            auto_oob_enabled,
+            disable_auto_oob_dhcp,
+            auto_netq_enabled,
+        ) = _extract_oob_netq_fields(kwargs)
 
         # Step 1: Disable NetQ first (if disabling) since NetQ requires OOB
         if auto_netq_enabled is False:

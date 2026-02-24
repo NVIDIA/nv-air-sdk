@@ -22,6 +22,7 @@ from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload
 
 if TYPE_CHECKING:
     from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+    from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
     from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 
 
@@ -45,7 +46,10 @@ class Node(BaseCompatMixin, NodeCompatMixin, AirModel):
     cdrom: dict[str, Any] | None = field(repr=False)
     storage_pci: dict[str, Any] | None = field(repr=False)
     attributes: dict[str, Any] | None = field(repr=False)
+    metadata: str | None = field(repr=False)
     advanced: dict[str, Any] = field(repr=False)
+    management_ip: str | None = field(default=None, repr=False)
+    management_mac: str | None = field(default=None, repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[NodeEndpointAPI]:
@@ -69,7 +73,7 @@ class Node(BaseCompatMixin, NodeCompatMixin, AirModel):
         self.model_api.rebuild(node=self, **kwargs)
 
     @property
-    def instructions(self) -> Any:
+    def instructions(self) -> NodeInstructionEndpointAPI:
         from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 
         return NodeInstructionEndpointAPI(

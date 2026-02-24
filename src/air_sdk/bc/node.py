@@ -95,7 +95,6 @@ class NodeCompatMixin(AirModelCompatMixin):
         'console_username',
         'interfaces',
         'last_worker',
-        'metadata',
         'original',
         'serial_port',
         'simx_ipv4',
@@ -454,6 +453,20 @@ class NodeEndpointAPICompatMixin:
             kwargs.pop('simulation_id')
 
         return super().get(*args, **kwargs)  # type: ignore[misc]
+
+    def patch(self, *args: Any, **kwargs: Any) -> Any:
+        """Patch a node with v1/v2 backward compatibility.
+
+        Maps field name mappings from v1/v2 SDK:
+        - os → image
+        - features → advanced
+        """
+        # Clean up kwargs for v3 compatibility
+        drop_removed_fields(kwargs, NodeCompatMixin._REMOVED_FIELDS)
+        _map_features_field_to_advanced_field(kwargs)
+        map_field_names(kwargs, NodeCompatMixin._FIELD_MAPPINGS)
+
+        return super().patch(*args, **kwargs)  # type: ignore[misc]
 
     @deprecated('get_nodes() is deprecated, use list() instead.')
     def get_nodes(self, simulation_id: str = '', **kwargs: Any) -> Any:

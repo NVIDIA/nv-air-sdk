@@ -6,7 +6,7 @@
 Stub file for simulations endpoint type hints.
 """
 
-from dataclasses import _MISSING_TYPE, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Iterator, Literal, TypedDict
 
@@ -15,6 +15,7 @@ from air_sdk.bc.cloud_init import CloudInit
 from air_sdk.endpoints import UserConfig
 from air_sdk.endpoints.images import Image
 from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
@@ -88,10 +89,13 @@ class Node(AirModel):
         pos_x: X position of the node
         pos_y: Y position of the node
         attributes: Attributes of the node
+        metadata: Custom metadata for the node (JSON string)
         advanced: Advanced attributes of the node
         cdrom: CDROM attributes of the node
         storage_pci: Storage PCI attributes of the node
         cloud_init: Cloud-Init assignments of the node
+        management_ip: IPv4 address of the management interface (read-only)
+        management_mac: MAC address of the management interface
     """
 
     id: str
@@ -109,10 +113,13 @@ class Node(AirModel):
     storage: int
     pos_x: int
     pos_y: int
-    attributes: NodeAttributes | None
+    attributes: NodeAttributes
+    metadata: str | None
     advanced: NodeAdvanced
     cdrom: NodeCDROM | None
     storage_pci: dict[str, StoragePCIField] | None
+    management_ip: str | None
+    management_mac: str
 
     @classmethod
     def get_model_api(cls) -> type[NodeEndpointAPI]: ...
@@ -121,16 +128,18 @@ class Node(AirModel):
     def update(
         self,
         *,
-        name: str | _MISSING_TYPE = ...,
-        image: Image | _MISSING_TYPE = ...,
-        cpu: int | _MISSING_TYPE = ...,
-        memory: int | _MISSING_TYPE = ...,
-        storage: int | _MISSING_TYPE = ...,
-        pos_x: int | _MISSING_TYPE = ...,
-        pos_y: int | _MISSING_TYPE = ...,
-        attributes: dict[str, Any] | _MISSING_TYPE = ...,
-        advanced: dict[str, Any] | _MISSING_TYPE = ...,
-        storage_pci: dict[str, Any] | _MISSING_TYPE = ...,
+        name: str = ...,
+        image: Image = ...,
+        cpu: int = ...,
+        memory: int = ...,
+        storage: int = ...,
+        pos_x: int = ...,
+        pos_y: int = ...,
+        attributes: dict[str, Any] = ...,
+        metadata: str | None = ...,
+        advanced: dict[str, Any] = ...,
+        storage_pci: dict[str, StoragePCIField] | None = ...,
+        management_mac: str = ...,
     ) -> None:
         """Update the node's properties.
 
@@ -142,7 +151,9 @@ class Node(AirModel):
             storage: Storage of the node
             pos_x: X position of the node
             pos_y: Y position of the node
+            management_mac: MAC address of the management interface
             attributes: Attributes of the node
+            metadata: Custom metadata for the node (JSON string)
             advanced: Advanced attributes of the node
             storage_pci: Storage PCI of the node
 
@@ -173,14 +184,16 @@ class Node(AirModel):
         ...
 
     @property
-    def instructions(self) -> Any:
+    def instructions(self) -> NodeInstructionEndpointAPI:
         """Access the instructions endpoint for this node.
 
         Returns:
-            Any instance scoped to this node
+            NodeInstructionEndpointAPI instance scoped to this node
 
         Example:
-            >>> node = api.nodes.instructions.list()
+            >>> node = api.nodes.get('node-id')
+            >>> for instruction in node.instructions.list():
+            ...     print(instruction.name)
         """
         ...
 
@@ -189,9 +202,10 @@ class Node(AirModel):
         """Access the interfaces endpoint for this node.
 
         Returns:
-            Any instance scoped to this node
+            InterfaceEndpointAPI instance scoped to this node
 
         Example:
+            >>> node = api.nodes.get('node-id')
             >>> for interface in node.interfaces.list():
             ...     print(interface.name)
         """
@@ -255,7 +269,8 @@ class Node(AirModel):
         """Delete all node instructions for this node.
 
         Example:
-            >>> node = api.nodes.delete_all_node_instructions()
+            >>> node = api.nodes.get('node-id')
+            >>> node.delete_all_node_instructions()
         """
         ...
 
@@ -313,14 +328,15 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         name: str,
         simulation: Simulation,
         image: Image,
-        cpu: int | None = ...,
-        memory: int | None = ...,
-        storage: int | None = ...,
-        pos_x: int | None = ...,
-        pos_y: int | None = ...,
-        attributes: NodeAttributes | None = ...,
-        advanced: NodeAdvanced | None = ...,
+        cpu: int = ...,
+        memory: int = ...,
+        storage: int = ...,
+        pos_x: int = ...,
+        pos_y: int = ...,
+        attributes: NodeAttributes = ...,
+        advanced: NodeAdvanced = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
+        management_mac: str = ...,
     ) -> Node:
         """Create a new node.
 
@@ -336,6 +352,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             attributes: (optional) Attributes of the node
             advanced: (optional) Advanced attributes of the node
             storage_pci: (optional) Storage PCI of the node
+            management_mac: (optional) MAC address of the management interface
 
         Returns:
             The created node instance
@@ -348,10 +365,10 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
     def list(
         self,
         *,
-        limit: int | None = ...,
-        offset: int | None = ...,
-        ordering: str | None = ...,
-        search: str | None = ...,
+        limit: int = ...,
+        offset: int = ...,
+        ordering: str = ...,
+        search: str = ...,
         **kwargs: Any,
     ) -> Iterator[Node]:
         """List all nodes.
@@ -366,12 +383,19 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             Iterator of Node instances
 
         Example:
+            >>> # List all nodes
+            >>> for node in api.nodes.list():
+            ...     print(node.name)
+
+            >>> # List all nodes ordered by name
             >>> for node in api.nodes.list(ordering='name'):
             ...     print(node.name)
 
+            >>> # search for nodes by name
             >>> for node in api.nodes.list(search='my-node'):
             ...     print(node.name)
 
+            >>> # List all nodes ordered by name descending
             >>> for node in api.nodes.list(ordering='-name'):
             ...     print(node.name)
         """
@@ -404,16 +428,17 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         self,
         *,
         node: Node | PrimaryKey,
-        name: str | _MISSING_TYPE = ...,
-        image: Image | _MISSING_TYPE = ...,
-        cpu: int | _MISSING_TYPE = ...,
-        memory: int | _MISSING_TYPE = ...,
-        storage: int | _MISSING_TYPE = ...,
-        pos_x: int | _MISSING_TYPE = ...,
-        pos_y: int | _MISSING_TYPE = ...,
-        attributes: NodeAttributes | _MISSING_TYPE = ...,
-        advanced: NodeAdvanced | _MISSING_TYPE = ...,
+        name: str = ...,
+        image: Image = ...,
+        cpu: int = ...,
+        memory: int = ...,
+        storage: int = ...,
+        pos_x: int = ...,
+        pos_y: int = ...,
+        attributes: NodeAttributes = ...,
+        advanced: NodeAdvanced = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
+        management_mac: str = ...,
     ) -> Node:
         """Update a specific node by ID.
 
@@ -429,9 +454,56 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             attributes: Attributes of the node
             advanced: Advanced attributes of the node
             storage_pci: Storage PCI of the node
+            management_mac: MAC address of the management interface
 
         Example:
+            # using node object
             >>> node = api.nodes.update(node=node, name='my-node')
+
+            # using node ID
+            >>> node = api.nodes.update(node='node-id', name='my-node')
+        """
+        ...
+
+    def patch(
+        self,
+        pk: PrimaryKey,
+        *,
+        name: str = ...,
+        image: Image = ...,
+        cpu: int = ...,
+        memory: int = ...,
+        storage: int = ...,
+        pos_x: int = ...,
+        pos_y: int = ...,
+        attributes: NodeAttributes = ...,
+        metadata: str | None = ...,
+        advanced: NodeAdvanced = ...,
+        storage_pci: dict[str, StoragePCIField] | None = ...,
+        management_mac: str = ...,
+    ) -> Node:
+        """Patch a specific node by ID.
+
+        Args:
+            pk: The node ID (string or UUID)
+            name: Name of the node
+            image: Image of the node
+            cpu: CPU of the node
+            memory: Memory of the node
+            storage: Storage of the node
+            pos_x: X position of the node
+            pos_y: Y position of the node
+            attributes: Attributes of the node
+            advanced: Advanced attributes of the node
+            storage_pci: Storage PCI of the node
+            metadata: Custom metadata for the node (JSON string)
+            management_mac: MAC address of the management interface
+
+        Returns:
+            The patched Node object
+
+        Example:
+            >>> node = api.nodes.patch('node-id', name='my-node')
         """
         ...
 
@@ -440,15 +512,17 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         system_node: System | PrimaryKey,
         name: str,
         simulation: Simulation | PrimaryKey,
-        image: Image | PrimaryKey | _MISSING_TYPE = ...,
-        cpu: int | _MISSING_TYPE = ...,
-        memory: int | _MISSING_TYPE = ...,
-        storage: int | _MISSING_TYPE = ...,
-        pos_x: int | _MISSING_TYPE = ...,
-        pos_y: int | _MISSING_TYPE = ...,
-        attributes: dict[str, Any] | _MISSING_TYPE = ...,
-        advanced: dict[str, Any] | _MISSING_TYPE = ...,
-        storage_pci: dict[str, StoragePCIField] | _MISSING_TYPE = ...,
+        image: Image | PrimaryKey = ...,
+        cpu: int = ...,
+        memory: int = ...,
+        storage: int = ...,
+        pos_x: int = ...,
+        pos_y: int = ...,
+        attributes: NodeAttributes = ...,
+        metadata: str | None = ...,
+        advanced: NodeAdvanced = ...,
+        storage_pci: dict[str, StoragePCIField] | None = ...,
+        management_mac: str = ...,
         **kwargs: Any,
     ) -> Node:
         # fmt: off
@@ -465,14 +539,24 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_x: Optional X position on canvas
             pos_y: Optional Y position on canvas
             attributes: Optional node attributes
+            metadata: Optional custom metadata for the node (JSON string)
             advanced: Optional advanced configuration
             storage_pci: Optional storage PCI configuration
+            management_mac: Optional MAC address of the management interface
             **kwargs: Additional parameters
 
         Returns:
             The created Node object
         Example:
-            >>> node = api.nodes.from_system_node(
+            # using system node template object
+            >>> system_node = api.nodes.get('system-node-template-id')
+            >>> node = api.nodes.create_from_system_node(
+            ...     system_node=system_node,
+            ...     name='my-node',
+            ...     simulation='simulation-id'
+            ... )
+            # using system node template ID
+            >>> node = api.nodes.create_from_system_node(
             ...     system_node='system-node-template-id',
             ...     name='my-node',
             ...     simulation='simulation-id'
@@ -492,6 +576,11 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
 
         Returns:
             List of System objects that can be used to create nodes.
+
+        Example:
+            >>> system_nodes = api.nodes.list_system_nodes()
+            >>> for system_node in system_nodes:
+            ...     print(system_node.name)
         """
         ...
 

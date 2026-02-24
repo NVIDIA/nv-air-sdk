@@ -41,6 +41,7 @@ class Simulation(AirModel):
         expires_at: When the simulation should be automatically deleted
         documentation: Documentation markdown or URL to documentation markdown
         complete_checkpoint_count: Number of complete checkpoints in the simulation
+        metadata: Custom metadata as a JSON string
     """
 
     id: str
@@ -77,6 +78,7 @@ class Simulation(AirModel):
     expires_at: datetime | None
     documentation: str | None
     complete_checkpoint_count: int
+    metadata: str | None
 
     @classmethod
     def get_model_api(cls) -> type[SimulationEndpointAPI]: ...
@@ -89,6 +91,7 @@ class Simulation(AirModel):
         sleep_at: datetime | None | _MISSING_TYPE = ...,
         expires_at: datetime | None | _MISSING_TYPE = ...,
         documentation: str | None | _MISSING_TYPE = ...,
+        metadata: str | None | _MISSING_TYPE = ...,
     ) -> None:
         """Update the simulation's properties.
 
@@ -101,9 +104,11 @@ class Simulation(AirModel):
             sleep_at: When the simulation should be automatically put to sleep
             expires_at: When the simulation should be automatically deleted
             documentation: Documentation markdown or URL to documentation markdown
+            metadata: Custom metadata as a JSON string
 
         Example:
             >>> simulation.update(name='New Name', documentation='https://docs.example.com')
+            >>> simulation.update(metadata='{"env": "production", "version": "1.0"}')
         """
         ...
 
@@ -639,6 +644,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         sleep_at: datetime | None = ...,
         expires_at: datetime | None = ...,
         documentation: str | None = ...,
+        metadata: str | None = ...,
     ) -> Simulation:
         # fmt: off
         """Create a blank simulation.
@@ -648,6 +654,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             sleep_at: When the simulation should be automatically put to sleep
             expires_at: When the simulation should be automatically deleted
             documentation: Documentation/description for the simulation
+            metadata: Custom metadata as a JSON string
             
         Returns:
             The created Simulation instance
@@ -663,6 +670,12 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             ...     name='My Simulation',
             ...     expires_at=expires,
             ...     documentation='Test simulation'
+            ... )
+
+            # With metadata:
+            >>> simulation = api.simulations.create(
+            ...     name='My Simulation',
+            ...     metadata='{"env": "staging", "owner": "team-a"}'
             ... )
         """
         # fmt: on
@@ -938,6 +951,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         sleep_at: datetime | None | _MISSING_TYPE = ...,
         expires_at: datetime | None | _MISSING_TYPE = ...,
         documentation: str | None | _MISSING_TYPE = ...,
+        metadata: str | None | _MISSING_TYPE = ...,
     ) -> Simulation:
         # fmt: off
         """Update a simulation's properties.
@@ -948,6 +962,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             sleep_at: When the simulation should be automatically put to sleep
             expires_at: When the simulation should be automatically deleted
             documentation: Documentation/description for the simulation
+            metadata: Custom metadata as a JSON string
 
         Returns:
             The updated Simulation instance
@@ -963,6 +978,12 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             ...     simulation='sim-123-abc',
             ...     name='Updated Name',
             ...     documentation='New docs'
+            ... )
+
+            # With metadata:
+            >>> updated_sim = api.simulations.update(
+            ...     simulation=simulation,
+            ...     metadata='{"env": "production", "version": "1.0"}'
             ... )
         """
         # fmt: on

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 
@@ -37,6 +37,9 @@ __all__ = [
     'InterfaceEndpointApi',  # BC alias for v2
     'SimulationInterfaceApi',  # BC alias for v1
     'SSHKeyEndpointAPI',
+    'Training',
+    'TrainingEndpointAPI',
+    'TrainingNGCData',
     'UserConfig',
     'UserConfigEndpointAPI',
     'UserConfigAPI',  # BC alias for v1
@@ -101,6 +104,7 @@ from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation, SimulationEndpointAPI
 from air_sdk.endpoints.ssh_keys import SSHKey, SSHKeyEndpointAPI
 from air_sdk.endpoints.systems import System, SystemEndpointAPI
+from air_sdk.endpoints.trainings import Training, TrainingEndpointAPI, TrainingNGCData
 from air_sdk.endpoints.user_configs import UserConfig, UserConfigEndpointAPI
 from air_sdk.endpoints.workers import (
     Worker,

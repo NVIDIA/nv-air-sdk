@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 """
@@ -7,7 +7,7 @@ Constants shared throughout the SDK.
 
 from datetime import timedelta
 from enum import Enum
-from urllib.parse import urlparse
+from urllib.parse import ParseResult, urlparse
 
 DEFAULT_CONNECT_TIMEOUT = timedelta(seconds=16)
 DEFAULT_READ_TIMEOUT = timedelta(seconds=61)
@@ -51,14 +51,46 @@ class TopologyFormat(str, Enum):
     DOT = 'DOT'
 
 
-SCOPED_KEY_PREFIX = 'nvapi-stg-'
-# TODO: change to production URL
-AIR_API_URL = 'https://api.air.nvidia.com/api/'
+SCOPED_KEY_PREFIX = 'nvapi-'
+AIR_API_URL = 'https://api.air-ngc.nvidia.com/'
 
-NGC_API_BASE_URL = urlparse(
-    'https://api.stg.ngc.nvidia.com'
-)  # Will drop the stg eventually
-NGC_DEVICE_LOGIN_URL = NGC_API_BASE_URL._replace(path='/device/login')
-NGC_TOKEN_URL = NGC_API_BASE_URL._replace(path='/token')
-NGC_SAK_DETAILS_URL = NGC_API_BASE_URL._replace(path='/v3/keys/get-caller-info')
-NGC_ME_URL = NGC_API_BASE_URL._replace(path='/v2/users/me')
+NGC_API_PROD_URL = 'https://api.ngc.nvidia.com'
+NGC_API_STG_URL = 'https://api.stg.ngc.nvidia.com'
+
+
+def get_ngc_api_base_url(api_url: str) -> ParseResult:
+    """Return the NGC API base URL based on the Air API URL.
+
+    If the api_url contains 'stg', the staging NGC URL is used.
+    Otherwise, the production NGC URL is used.
+    """
+    base = NGC_API_STG_URL if 'stg' in api_url else NGC_API_PROD_URL
+    return urlparse(base)
+
+
+def get_ngc_device_login_url(api_url: str) -> ParseResult:
+    """Return the NGC device login URL."""
+    return get_ngc_api_base_url(api_url)._replace(
+        path='/device/login',
+    )
+
+
+def get_ngc_token_url(api_url: str) -> ParseResult:
+    """Return the NGC token URL."""
+    return get_ngc_api_base_url(api_url)._replace(
+        path='/token',
+    )
+
+
+def get_ngc_sak_details_url(api_url: str) -> ParseResult:
+    """Return the NGC SAK details URL."""
+    return get_ngc_api_base_url(api_url)._replace(
+        path='/v3/keys/get-caller-info',
+    )
+
+
+def get_ngc_me_url(api_url: str) -> ParseResult:
+    """Return the NGC user info URL."""
+    return get_ngc_api_base_url(api_url)._replace(
+        path='/v2/users/me',
+    )

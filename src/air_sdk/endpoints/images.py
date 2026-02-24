@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
@@ -79,6 +79,9 @@ class Image(BaseCompatMixin, ImageCompatMixin, AirModel):
     provider: str = field(repr=False)
     minimum_resources: MinimumResources = field(repr=False)
     is_owned_by_client: bool = field(repr=False)
+    notes: str | None = field(repr=False)
+    release_notes: str | None = field(repr=False)
+    user_manual: str | None = field(repr=False)
     # Upload fields
     upload_status: str
     last_uploaded_at: Union[datetime, None] = field(repr=False)

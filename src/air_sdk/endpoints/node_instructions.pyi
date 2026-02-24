@@ -6,7 +6,7 @@
 Stub file for node instructions endpoint type hints.
 """
 
-from dataclasses import _MISSING_TYPE, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Iterator, Literal, TypedDict
 
@@ -95,8 +95,8 @@ class NodeInstruction(AirModel):
     def update(
         self,
         *,
-        name: str | None = ...,
-        run_again_on_rebuild: bool | None = ...,
+        name: str = ...,
+        run_again_on_rebuild: bool = ...,
     ) -> None:
         """Update the node instruction's properties.
 
@@ -128,7 +128,7 @@ class NodeInstructionEndpointAPI(BaseEndpointAPI[NodeInstruction]):
     def create(
         self,
         *,
-        node: str | PrimaryKey,
+        node: Node | PrimaryKey,
         executor: Literal['shell', 'init', 'file'],
         data: ShellData | FileData | InitData,
         name: str | None = ...,
@@ -137,9 +137,9 @@ class NodeInstructionEndpointAPI(BaseEndpointAPI[NodeInstruction]):
         """Create a new node instruction.
 
         Args:
-            node: Node object or ID to execute the instruction on
-            name: Name for the instruction
+            node: Node object or node ID to execute the instruction on
             executor: Type of executor ('shell', 'init', 'file')
+            name: (optional) Name for the instruction
 
             data: Instruction data/payload (executor-specific):
 
@@ -153,7 +153,7 @@ class NodeInstructionEndpointAPI(BaseEndpointAPI[NodeInstruction]):
                 InitData - For 'init' executor
                     Contains: 'hostname' (hostname to set for the node)
 
-            run_again_on_rebuild: Optional whether to run instruction again on rebuild
+            run_again_on_rebuild: (optional) Whether to run instruction again on rebuild
 
         Returns:
             The created NodeInstruction instance
@@ -225,18 +225,21 @@ class NodeInstructionEndpointAPI(BaseEndpointAPI[NodeInstruction]):
             Iterator of NodeInstruction instances
 
         Example:
-            >>> # List all instructions for a node
+            >>> # List all instructions
+            >>> for instruction in api.node_instructions.list():
+            ...     print(instruction.name)
+
+            >>> # Filter instructions by node
             >>> for instruction in api.node_instructions.list(node='node-id'):
             ...     print(instruction.name)
 
-            >>> # List with multiple filters
-            >>> for instruction in api.node_instructions.list(
-            ...     simulation='sim-id',
-            ...     executor='shell',
-            ...     state='complete',
-            ...     ordering='-created',
-            ... ):
-            ...     print(instruction.name, instruction.state)
+            >>> # Search for instructions by name
+            >>> for instruction in api.node_instructions.list(search='my-instruction'):
+            ...     print(instruction.name)
+
+            >>> # Order by created descending
+            >>> for instruction in api.node_instructions.list(ordering='-created'):
+            ...     print(instruction.name)
         """
         ...
 
@@ -259,8 +262,8 @@ class NodeInstructionEndpointAPI(BaseEndpointAPI[NodeInstruction]):
         self,
         *,
         pk: PrimaryKey,
-        name: str | None | _MISSING_TYPE = ...,
-        run_again_on_rebuild: bool | None | _MISSING_TYPE = ...,
+        name: str = ...,
+        run_again_on_rebuild: bool = ...,
     ) -> NodeInstruction:
         # fmt: off
         """Partially update a node instruction.

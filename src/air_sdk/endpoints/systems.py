@@ -32,7 +32,8 @@ class System(BaseCompatMixin, AirModel):
     storage: int = field(repr=False)
     cpu: int = field(repr=False)
     category: str = field(repr=False)
-    attributes: dict[str, Any] | None = field(repr=False)
+    attributes: dict[str, Any] = field(repr=False)
+    split_options: list[int] | None = field(repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[SystemEndpointAPI]:

@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from air_sdk.endpoints.services import ServiceEndpointAPI
@@ -62,6 +62,12 @@ class Interface(BaseCompatMixin, InterfaceCompatMixin, AirModel):
     def disconnect(self) -> Interface:
         return self.model_api.disconnect(interface=self)
 
+    def breakout(self, **kwargs: Any) -> list[Interface]:
+        return self.model_api.breakout(interface=self, **kwargs)
+
+    def revert_breakout(self, **kwargs: Any) -> Interface:
+        return self.model_api.revert_breakout(interface=self, **kwargs)
+
     @property
     def services(self) -> ServiceEndpointAPI:
         from air_sdk.endpoints.services import ServiceEndpointAPI
@@ -82,6 +88,8 @@ class InterfaceEndpointAPI(
 ):
     API_PATH = 'simulations/nodes/interfaces/'
     SET_CONNECTION_PATH = 'set-connection'
+    BREAKOUT_PATH = 'breakout'
+    REVERT_BREAKOUT_PATH = 'revert-breakout'
     model = Interface
 
     def set_connection(
@@ -119,3 +127,31 @@ class InterfaceEndpointAPI(
     @validate_payload_types
     def disconnect(self, *, interface: Interface | PrimaryKey) -> Interface:
         return self.set_connection(interface, None)
+
+    @validate_payload_types
+    def breakout(
+        self, *, interface: Interface | PrimaryKey, **kwargs: Any
+    ) -> list[Interface]:
+        url = mixins.build_resource_url(self.url, interface, self.BREAKOUT_PATH)
+        response = self.__api__.client.post(url, data=mixins.serialize_payload(kwargs))
+        raise_if_invalid_response(response, status_code=HTTPStatus.OK, data_type=list)
+
+        if isinstance(interface, Interface):
+            interface.refresh()
+
+        return [self.load_model(data) for data in response.json()]
+
+    @validate_payload_types
+    def revert_breakout(
+        self, *, interface: Interface | PrimaryKey, **kwargs: Any
+    ) -> Interface:
+        url = mixins.build_resource_url(self.url, interface, self.REVERT_BREAKOUT_PATH)
+        response = self.__api__.client.post(
+            url, data=mixins.serialize_payload(kwargs) if kwargs else None
+        )
+        raise_if_invalid_response(response, status_code=HTTPStatus.OK)
+
+        if isinstance(interface, Interface):
+            interface.refresh()
+
+        return self.load_model(response.json())

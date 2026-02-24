@@ -6,7 +6,7 @@
 Stub file for images endpoint type hints.
 """
 
-from dataclasses import _MISSING_TYPE, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterator, Literal
@@ -65,6 +65,9 @@ class Image(AirModel):
         size: Size of the image
         hash: Hash of the image
         is_owned_by_client: Whether the image is owned by the client
+        notes: Notes about the image
+        release_notes: Release notes for the image
+        user_manual: User manual for the image
     """
 
     id: str
@@ -88,6 +91,9 @@ class Image(AirModel):
     size: int
     hash: str
     is_owned_by_client: bool
+    notes: str | None
+    release_notes: str | None
+    user_manual: str | None
 
     @classmethod
     def get_model_api(cls) -> type[ImageEndpointAPI]: ...
@@ -96,16 +102,19 @@ class Image(AirModel):
     def update(
         self,
         *,
-        name: str | _MISSING_TYPE = ...,
-        version: str | _MISSING_TYPE = ...,
-        default_username: str | _MISSING_TYPE = ...,
-        default_password: str | _MISSING_TYPE = ...,
-        mountpoint: str | None | _MISSING_TYPE = ...,
-        cpu_arch: str | _MISSING_TYPE = ...,
-        includes_air_agent: bool | _MISSING_TYPE = ...,
-        emulation_type: list[str] | _MISSING_TYPE = ...,
-        emulation_version: str | _MISSING_TYPE = ...,
-        provider: str | _MISSING_TYPE = ...,
+        name: str = ...,
+        version: str = ...,
+        default_username: str = ...,
+        default_password: str = ...,
+        mountpoint: str | None = ...,
+        cpu_arch: str = ...,
+        includes_air_agent: bool = ...,
+        emulation_type: list[str] = ...,
+        emulation_version: str = ...,
+        provider: str = ...,
+        notes: str | None = ...,
+        release_notes: str | None = ...,
+        user_manual: str | None = ...,
     ) -> None:
         """Update the image's properties.
 
@@ -120,6 +129,9 @@ class Image(AirModel):
             emulation_type: The types of emulation the image supports
             emulation_version: The version of the emulation the image supports
             provider: Provider of the image
+            notes: Notes about the image
+            release_notes: Release notes for the image
+            user_manual: User manual for the image
 
         Example
         -------
@@ -132,8 +144,8 @@ class Image(AirModel):
         self,
         *,
         filepath: str | Path,
-        timeout: timedelta | None | _MISSING_TYPE = ...,
-        max_workers: int | _MISSING_TYPE = ...,
+        timeout: timedelta | None = ...,
+        max_workers: int = ...,
     ) -> Image:
         """Upload the image to the Air platform.
 
@@ -170,8 +182,8 @@ class Image(AirModel):
     def publish(
         self,
         *,
-        name: str | _MISSING_TYPE = ...,
-        version: str | _MISSING_TYPE = ...,
+        name: str = ...,
+        version: str = ...,
     ) -> Image:
         """Publish the image.
 
@@ -189,9 +201,7 @@ class Image(AirModel):
         """
         ...
 
-    def unpublish(
-        self, *, name: str | _MISSING_TYPE = ..., version: str | _MISSING_TYPE = ...
-    ) -> Image:
+    def unpublish(self, *, name: str = ..., version: str = ...) -> Image:
         """Unpublish the image.
 
         Args:
@@ -208,9 +218,7 @@ class Image(AirModel):
         """
         ...
 
-    def share(
-        self, *, target_org: str, expires_at: datetime | _MISSING_TYPE = ...
-    ) -> ImageShare:
+    def share(self, *, target_org: str, expires_at: datetime = ...) -> ImageShare:
         """Share the image with another organization.
 
         Args:
@@ -239,15 +247,15 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         version: str,
         default_username: str,
         default_password: str,
-        mountpoint: str | None | _MISSING_TYPE = ...,
-        cpu_arch: str | _MISSING_TYPE = ...,
-        includes_air_agent: bool | _MISSING_TYPE = ...,
-        emulation_type: list[str] | _MISSING_TYPE = ...,
-        emulation_version: str | _MISSING_TYPE = ...,
-        provider: str | _MISSING_TYPE = ...,
-        filepath: str | Path | _MISSING_TYPE = ...,
-        timeout: timedelta | None | _MISSING_TYPE = ...,
-        max_workers: int | _MISSING_TYPE = ...,
+        mountpoint: str | None = ...,
+        cpu_arch: str = ...,
+        includes_air_agent: bool = ...,
+        emulation_type: list[str] = ...,
+        emulation_version: str = ...,
+        provider: str = ...,
+        filepath: str | Path = ...,
+        timeout: timedelta | None = ...,
+        max_workers: int = ...,
     ) -> Image:
         """Create a new image.
 
@@ -389,8 +397,8 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         *,
         image: Image | PrimaryKey,
         filepath: str | Path,
-        timeout: timedelta | None | _MISSING_TYPE = ...,
-        max_workers: int | _MISSING_TYPE = ...,
+        timeout: timedelta | None = ...,
+        max_workers: int = ...,
     ) -> Image:
         """Upload the image to the Air platform.
 
@@ -444,8 +452,8 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         self,
         *,
         image: Image | PrimaryKey,
-        name: str | _MISSING_TYPE = ...,
-        version: str | _MISSING_TYPE = ...,
+        name: str = ...,
+        version: str = ...,
     ) -> Image:
         """Publish the image.
 
@@ -470,8 +478,8 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         self,
         *,
         image: Image | PrimaryKey,
-        name: str | _MISSING_TYPE = ...,
-        version: str | _MISSING_TYPE = ...,
+        name: str = ...,
+        version: str = ...,
     ) -> Image:
         """Unpublish the image.
 
@@ -495,7 +503,7 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         *,
         image: Image | PrimaryKey,
         target_org: str,
-        expires_at: datetime | _MISSING_TYPE = ...,
+        expires_at: datetime = ...,
     ) -> ImageShare:
         """Share the image with another organization.
 
@@ -520,8 +528,8 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         self,
         *,
         image_share: PrimaryKey,
-        name: str | _MISSING_TYPE = ...,
-        version: str | _MISSING_TYPE = ...,
+        name: str = ...,
+        version: str = ...,
     ) -> Image:
         # fmt: off
         """Claim a shared image into your organization.
@@ -579,10 +587,10 @@ class ImageShareEndpointAPI(BaseEndpointAPI[ImageShare]):
     def list(  # type: ignore[override]
         self,
         *,
-        limit: int | _MISSING_TYPE = ...,
-        offset: int | _MISSING_TYPE = ...,
-        ordering: str | _MISSING_TYPE = ...,
-        search: str | _MISSING_TYPE = ...,
+        limit: int = ...,
+        offset: int = ...,
+        ordering: str = ...,
+        search: str = ...,
     ) -> Iterator[ImageShare]:
         """List all shared images.
 
@@ -616,7 +624,7 @@ class ImageShareEndpointAPI(BaseEndpointAPI[ImageShare]):
         *,
         image: Image | PrimaryKey,
         target_org: str,
-        expires_at: datetime | _MISSING_TYPE = ...,
+        expires_at: datetime = ...,
     ) -> ImageShare:
         # fmt: off
         """Create a new image share.

@@ -35,7 +35,6 @@ class InterfaceCompatMixin(AirModelCompatMixin):
         'prefix_ipv6',
         'port_number',
         'simulation',
-        'breakout',
         'preserve_mac',
         'link',
         'url',
@@ -56,11 +55,6 @@ class InterfaceCompatMixin(AirModelCompatMixin):
 
         # Call the parent update() method
         super().update(*args, **kwargs)  # type: ignore[misc]
-
-    def breakout(self, *args: Any, **kwargs: Any) -> None:
-        raise NotImplementedError(
-            'The `breakout()` method is not supported in the current air-api version.'
-        )
 
     @property
     def simulation(self) -> Any:

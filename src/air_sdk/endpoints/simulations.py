@@ -58,6 +58,7 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
     expires_at: datetime | None = field(default=None, repr=False)
     documentation: str | None = field(default=None, repr=False)
     complete_checkpoint_count: int = field(default=0, repr=False)
+    metadata: str | None = field(default=None, repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[SimulationEndpointAPI]:

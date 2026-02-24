@@ -8,7 +8,7 @@ Stub file for interfaces endpoint type hints.
 
 from dataclasses import _MISSING_TYPE, dataclass
 from datetime import datetime
-from typing import Iterator, Literal
+from typing import Iterator, List, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.endpoints.nodes import Node
@@ -98,6 +98,44 @@ class Interface(AirModel):
         Example:
             >>> interface.disconnect()
 
+        """
+        ...
+    def breakout(self, *, split_count: int) -> List[Interface]:
+        """Break out this interface into multiple sub-interfaces.
+
+        Args:
+            split_count: Number of interfaces to create from the breakout.
+                Must be supported by the node's split_options.
+
+        Returns:
+            List of created breakout interfaces
+
+        Example:
+            >>> interface = api.interfaces.get('interface-id')
+            >>> breakout_interfaces = interface.breakout(split_count=4)
+            >>> # Creates swp1s0, swp1s1, swp1s2, swp1s3
+        """
+        ...
+    def revert_breakout(self) -> Interface:
+        """Revert this breakout interface back to a single interface.
+
+        Can be called on any of the breakout interfaces - they will all be
+        reverted and deleted except the first one (s0), which will be renamed
+        back to the original name.
+
+        Returns:
+            The reverted interface
+
+        Example:
+            >>> interface = api.interfaces.get('interface-id')  # e.g., swp1s0
+            >>> reverted = interface.revert_breakout()  # Reverts back to swp1
+
+        Note:
+            - All breakout interfaces will be deleted except the first one (s0)
+            - The s0 interface will be renamed back to the original name
+            - Any existing connections on the breakout interfaces are
+              automatically removed
+            - Cannot revert if any breakout interface has services attached
         """
         ...
     @property
@@ -300,5 +338,66 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
         Example:
             >>> api.interfaces.disconnect(interface=interface)
             >>> api.interfaces.disconnect(interface='interface-id')
+        """
+        ...
+    def breakout(
+        self, *, interface: Interface | PrimaryKey, split_count: int
+    ) -> List[Interface]:
+        # fmt: off
+        """Break out an interface into multiple sub-interfaces.
+
+        Breaks out a data plane interface into multiple sub-interfaces.
+        For example, breaking out "swp1" with a 4-way split creates
+        "swp1s0", "swp1s1", "swp1s2", "swp1s3".
+
+        Args:
+            interface: The interface to break out
+            split_count: Number of interfaces to create from the breakout.
+                Must be supported by the node's split_options (typically 2, 4, or 8).
+
+        Returns:
+            List of all created breakout interfaces
+
+        Example:
+            >>> interface = api.interfaces.get('interface-id')
+            >>> breakout_interfaces = api.interfaces.breakout(  # fmt: skip
+            ...     interface=interface, split_count=4
+            ... )
+            >>> print([i.name for i in breakout_interfaces])
+            ['swp1s0', 'swp1s1', 'swp1s2', 'swp1s3']
+
+        Note:
+            - Only data plane interfaces can be broken out
+            - Any existing connection on the interface will be automatically removed
+            - The original interface is renamed to <name>s0 and keeps its MAC address
+            - New interfaces are created with allocated MAC addresses
+        """
+        # fmt: on
+        ...
+    def revert_breakout(self, *, interface: Interface | PrimaryKey) -> Interface:
+        """Revert a broken out interface back to a single interface.
+
+        Reverts broken out interfaces back to a single interface.
+        For example, reverting "swp1s0" (along with "swp1s1", "swp1s2", "swp1s3")
+        back to "swp1". This can be called on any of the breakout interfaces.
+
+        Args:
+            interface: One of the breakout interfaces (e.g., swp1s0, swp1s1, etc.)
+
+        Returns:
+            The reverted interface with its original name
+
+        Example:
+            >>> interface = api.interfaces.get('interface-id')  # e.g., swp1s2
+            >>> reverted = api.interfaces.revert_breakout(interface=interface)
+            >>> print(reverted.name)
+            'swp1'
+
+        Note:
+            - All breakout interfaces will be deleted except the first one (s0)
+            - The s0 interface will be renamed back to the original name
+            - Any existing connections on the breakout interfaces are
+              automatically removed
+            - Cannot revert if any breakout interface has services attached
         """
         ...

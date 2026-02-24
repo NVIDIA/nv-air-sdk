@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
@@ -45,6 +45,8 @@ __all__ = [
     'MarketplaceDemoTagApi',
     'SSHKey',
     'SSHKeyEndpointAPI',
+    'Training',
+    'TrainingEndpointAPI',
     'UserConfigAPI',
     'UserConfigEndpointApi',
     # Organization / Resource Budget endpoint
@@ -87,6 +89,7 @@ if TYPE_CHECKING:
         SimulationEndpointAPI,
         SSHKeyEndpointAPI,
         SystemEndpointAPI,
+        TrainingEndpointAPI,
         UserConfigEndpointAPI,
         WorkerClientCertificateEndpointAPI,
         WorkerEndpointAPI,
@@ -110,6 +113,7 @@ class AirApi:
         username: str | None = None,  # BC parameter for BC init won't fail
         password: str | None = None,  # BC alias for api_key
         bearer_token: str | None = None,  # BC alias for api_key
+        auto_patch: bool = True,  # BC: enable auto-patching on attribute changes
     ) -> None:
         """
         Initialize AirApi and optionally authenticate with a local NGC config.
@@ -120,6 +124,7 @@ class AirApi:
         - AirApi.with_ngc_config()
         """
         self.client = Client(api_url)
+        self.auto_patch = auto_patch
         if authenticate:
             # api_key, password, and bearer_token are all aliases for the same thing
             token = api_key or password or bearer_token
@@ -129,28 +134,36 @@ class AirApi:
                 self.auth_with_ngc_config()
 
     @classmethod
-    def with_api_key(cls, api_key: str, api_url: str = const.AIR_API_URL) -> 'AirApi':
+    def with_api_key(
+        cls, api_key: str, api_url: str = const.AIR_API_URL, auto_patch: bool = True
+    ) -> 'AirApi':
         """Initialize API with an explicit NGC API Key.
 
         The `api_key` is also known as a Starfleet API Key, or 'SAK'.
         """
-        instance = cls(api_url=api_url, authenticate=False)
+        instance = cls(api_url=api_url, authenticate=False, auto_patch=auto_patch)
         instance.client.headers.update({'Authorization': f'Bearer {api_key}'})
         return instance
 
     @classmethod
     def with_device_login(
-        cls, email: str, org_num: str, api_url: str = const.AIR_API_URL
+        cls,
+        email: str,
+        org_num: str,
+        api_url: str = const.AIR_API_URL,
+        auto_patch: bool = True,
     ) -> 'AirApi':
         """Initialize API with device login authentication."""
-        instance = cls(api_url=api_url, authenticate=False)
+        instance = cls(api_url=api_url, authenticate=False, auto_patch=auto_patch)
         instance.client.ngc_device_login(email, org_num)
         return instance
 
     @classmethod
-    def with_ngc_config(cls, api_url: str = const.AIR_API_URL) -> 'AirApi':
+    def with_ngc_config(
+        cls, api_url: str = const.AIR_API_URL, auto_patch: bool = True
+    ) -> 'AirApi':
         """Initialize API using NGC config for authentication."""
-        return cls(api_url=api_url, authenticate=True)
+        return cls(api_url=api_url, authenticate=True, auto_patch=auto_patch)
 
     def auth_with_ngc_config(self) -> None:
         """Authenticate with a local NGC config.
@@ -167,7 +180,8 @@ class AirApi:
         try:
             auto_sak = self.client.hunt_for_sak()
             if auto_sak:
-                print(f'Using auto-detected SAK found at ~/.ngc/config: {auto_sak}')  # noqa: T201
+                censored_sak = f'{"*" * (len(auto_sak) - 3)}{auto_sak[-3:]}'
+                print(f'Using auto-detected SAK found at ~/.ngc/config: {censored_sak}')  # noqa: T201
                 self.client.headers.update({'Authorization': f'Bearer {auto_sak}'})
             else:
                 raise AirError(err_msg)
@@ -215,6 +229,20 @@ class AirApi:
         from .endpoints import InterfaceEndpointAPI
 
         return InterfaceEndpointAPI(self)
+
+    @property
+    def breakouts(self) -> None:
+        """Breakouts endpoint - not supported in current API version.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError(
+            'The breakouts endpoint is not supported in the current API version. '
+            'Breakouts are now managed as interface actions. '
+            'Use interface.breakout(split_count) to create breakouts, '
+            'and interface.revert_breakout() to revert them.'
+        )
 
     @property
     def services(self) -> ServiceEndpointAPI:
@@ -279,6 +307,12 @@ class AirApi:
         from .endpoints import SSHKeyEndpointAPI
 
         return SSHKeyEndpointAPI(self)
+
+    @property
+    def trainings(self) -> TrainingEndpointAPI:
+        from .endpoints import TrainingEndpointAPI
+
+        return TrainingEndpointAPI(self)
 
     @property
     def manifests(self) -> ManifestEndpointAPI:
@@ -366,6 +400,8 @@ from air_sdk.endpoints import (  # noqa: E402
     SimulationEndpointAPI,
     SSHKey,
     SSHKeyEndpointAPI,
+    Training,
+    TrainingEndpointAPI,
     UserConfigEndpointAPI,
 )
 

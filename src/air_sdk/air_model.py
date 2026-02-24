@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
 
+import logging
 import warnings
 from abc import ABC, abstractmethod
 from dataclasses import Field, InitVar, asdict, dataclass, fields, is_dataclass
@@ -48,6 +49,8 @@ from air_sdk.utils import (
 if TYPE_CHECKING:
     from air_sdk import AirApi
 
+logger = logging.getLogger(__name__)
+
 T = TypeVar('T')
 TAirModel = TypeVar('TAirModel', bound='AirModel')
 TAirModel_co = TypeVar('TAirModel_co', bound='AirModel', covariant=True)
@@ -67,6 +70,7 @@ def _generate_special_field() -> SpecialField:
 @dataclass(eq=False)
 class BaseModel:
     __serializing__ = False  # A flag indicating if the instance is serializing
+    __refreshing__ = False  # A flag indicating if the instance is refreshing from API
 
     def dict(self) -> DataDict:
         try:
@@ -144,6 +148,68 @@ class AirModel(BaseModel, ABC):
         """Enable membership testing: 'field_name' in obj"""
         return hasattr(self, key)
 
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Set attribute and optionally auto-patch to API if enabled.
+
+        This implements backward compatibility with v1/v2 SDK behavior where
+        setting an attribute would automatically send a PATCH request to the API.
+        """
+        # Handle special attributes that should never trigger patching
+        if name.startswith('_'):
+            return super().__setattr__(name, value)
+
+        # Don't auto-patch during refresh operations
+        try:
+            if super().__getattribute__('__refreshing__'):
+                return super().__setattr__(name, value)
+        except AttributeError:
+            pass
+
+        # Try to get current state to determine if we should patch
+        try:
+            original = super().__getattribute__(name)
+            api = super().__getattribute__('__api__')
+            pk = super().__getattribute__(self.primary_key_field)
+        except Exception:
+            # Object is still being initialized, field doesn't exist yet,
+            # or getting the value failed (e.g., property that makes API calls)
+            # In any case, just set the value without auto-patching
+            return super().__setattr__(name, value)
+
+        # Check if we should auto-patch: enabled, field exists, has pk, and value changed.
+        # Skip when original is FIELD_LAZY — that means a lazy field is being resolved
+        # from the API, not a user-initiated change.
+        if (
+            getattr(api, 'auto_patch', True)
+            and api
+            and pk
+            and original != value
+            and original != AirModel.FIELD_LAZY
+        ):
+            self._patch(name, value)
+
+        return super().__setattr__(name, value)
+
+    def _patch(self, field_name: str, value: Any) -> None:
+        """Send a PATCH request to update a single field on the API.
+
+        Args:
+            field_name: Name of the field to update
+            value: New value for the field
+        """
+        try:
+            self.get_model_api()(self.__api__).patch(self.__pk__, **{field_name: value})
+        except Exception:
+            # Ignore patch errors to match legacy behavior
+            # The attribute will still be set locally
+            logger.debug(
+                "Auto-patch failed for field '%s' on %s (pk=%s)",
+                field_name,
+                type(self).__name__,
+                self.__pk__,
+                exc_info=True,
+            )
+
     def __getattribute__(self, name: str) -> Any:
         value = super().__getattribute__(name)
 
@@ -176,8 +242,15 @@ class AirModel(BaseModel, ABC):
             if endpoint_api is None:
                 raise NotImplementedError
             refreshed_obj = endpoint_api.get(pk=self.__pk__)
-        for field in fields(self):
-            setattr(self, field.name, getattr(refreshed_obj, field.name))
+
+        # Set refreshing flag to prevent auto-patch during field updates
+        try:
+            self.__refreshing__ = True
+            for field in fields(self):
+                setattr(self, field.name, getattr(refreshed_obj, field.name))
+            # TODO: Future - Maybe add except here with logging the error?
+        finally:
+            self.__refreshing__ = False
 
     @classmethod
     @abstractmethod
@@ -221,7 +294,9 @@ class AirModel(BaseModel, ABC):
         """Delete the instance and nullify the primary key."""
         self._ensure_pk_exists('deleted')
         self.get_model_api()(self.__api__).delete(self.__pk__)
-        setattr(self, self.primary_key_field, None)
+        # Bypass __setattr__ to avoid triggering an auto-patch PATCH call
+        # on the already-deleted resource.
+        super().__setattr__(self.primary_key_field, None)
 
 
 class ForeignKeyMixin(Generic[TAirModel_co]):
@@ -340,6 +415,16 @@ class BaseEndpointAPI(EndpointMethodMixin, Generic[TAirModel_co]):
                         UserWarning,
                         stacklevel=4,
                     )
+                    continue
+
+                # Skip fields that are already defined as properties
+                # (e.g. cloud_init on Node). This prevents warnings
+                # from being raised when the API returns data for a
+                # field that is implemented as a property.
+                # Tradeoff: the data from this response is discarded,
+                # so accessing the property later will trigger a new
+                # API call.
+                if isinstance(getattr(type(model_inst), field_name, None), property):
                     continue
 
                 try:

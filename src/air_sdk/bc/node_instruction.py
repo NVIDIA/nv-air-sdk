@@ -113,7 +113,6 @@ class NodeInstructionCompatMixin(AirModelCompatMixin):
     # Module-level field mappings: old (v2) → new (v3)
     _FIELD_MAPPINGS: dict[str, str] = {
         'instruction': 'data',  # v2's 'instruction' string → v3's 'data' dict
-        'pk': 'node',  # v2's 'pk' (node ID as primary key) → v3's 'node' (foreign key)
     }
 
     # Fields and filters that were removed in v3
@@ -142,7 +141,6 @@ class NodeInstructionEndpointAPICompatMixin:
 
     This handles BC for API-level methods (create, list, etc.)
     where v2 used different parameter or field names than v3:
-    - pk → node (parameter rename)
     - instruction (string) → data (dict) (type change)
     - monitor removed
     """
@@ -151,12 +149,16 @@ class NodeInstructionEndpointAPICompatMixin:
         """Create method with v2 → v3 compatibility.
 
         Handles:
-        - pk → node parameter rename
         - data: str → data: dict conversion
+        - pk: str → node: str (node ID)
         - Drops monitor fields
         """
         drop_removed_fields(kwargs, NodeInstructionCompatMixin._REMOVED_FIELDS)
         map_field_names(kwargs, NodeInstructionCompatMixin._FIELD_MAPPINGS)
+
+        # handle the case where the user tries to create the instruction with the pk field
+        if 'pk' in kwargs:
+            kwargs['node'] = kwargs.pop('pk')
 
         if 'data' in kwargs and isinstance(kwargs['data'], str):
             _convert_data_field_to_dict(kwargs)
@@ -167,10 +169,29 @@ class NodeInstructionEndpointAPICompatMixin:
         """List method with v2 → v3 compatibility.
 
         Handles:
-        - pk → node parameter rename
         - Drops monitor field
         """
         drop_removed_fields(kwargs, NodeInstructionCompatMixin._REMOVED_FIELDS)
         map_field_names(kwargs, NodeInstructionCompatMixin._FIELD_MAPPINGS)
 
         return super().list(*args, **kwargs)  # type: ignore[misc]
+
+    def patch(self, *args: Any, **kwargs: Any) -> Any:
+        """Patch a node instruction with v2 → v3 compatibility.
+
+        Handles:
+        - Drops monitor field
+        """
+        drop_removed_fields(kwargs, NodeInstructionCompatMixin._REMOVED_FIELDS)
+        map_field_names(kwargs, NodeInstructionCompatMixin._FIELD_MAPPINGS)
+
+        # handle the case where the user tries to update the data of the instruction
+        if 'data' in kwargs:
+            warnings.warn(
+                'The data of an instruction cannot be updated in the current '
+                'AIR API version.',
+                DeprecationWarning,
+                stacklevel=3,
+            )
+
+        return super().patch(*args, **kwargs)  # type: ignore[misc]

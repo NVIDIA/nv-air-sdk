@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nv-air-sdk"
-version = "1.0.0"
+version = "1.1.0"
 description = "Python SDK for creating, running and managing simulations on NVIDIA Air"
 authors = ["Air Team <air@nvidia.com>"]
 readme = "README.md"
@@ -12,6 +12,14 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 include = ["src/air_sdk/py.typed"]
+exclude = [
+    "tests/",
+    "ngci_build/",
+    ".coderabbit.yaml",
+    ".gitlab-ci.yml",
+    ".pulse-trufflehog-allowlist.json",
+    "DEVELOPMENT.md",
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
