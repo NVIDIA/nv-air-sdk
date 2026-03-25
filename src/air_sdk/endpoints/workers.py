@@ -154,7 +154,7 @@ class WorkerEndpointAPI(
         search: str | _MISSING_TYPE = MISSING,
         ordering: str | _MISSING_TYPE = MISSING,
         **params: Any,
-    ) -> Iterator[Worker]:
+    ) -> mixins.IndexableIterator[Worker]:
         """List all workers.
 
         Example
@@ -212,7 +212,7 @@ class WorkerClientCertificateEndpointAPI(
     model = WorkerClientCertificate
 
     @validate_payload_types
-    def list(
+    def list(  # type: ignore[override]
         self,
         worker: Worker | PrimaryKey | _MISSING_TYPE = MISSING,
         search: str | _MISSING_TYPE = MISSING,

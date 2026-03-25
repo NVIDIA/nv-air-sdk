@@ -22,6 +22,7 @@ from .cloud_init import CloudInit, CloudInitEndpointAPI
 from .decorators import deprecated
 from .image import ImageCompatMixin, ImageEndpointAPICompatMixin
 from .interface import InterfaceCompatMixin, InterfaceEndpointAPICompatMixin
+from .link import LinkCompatMixin, LinkEndpointAPICompatMixin
 from .manifests import ManifestCompatMixin, ManifestEndpointAPICompatMixin
 from .marketplace_demos import (
     MarketplaceDemoCompatMixin,
@@ -55,6 +56,8 @@ __all__ = [
     'NodeEndpointAPICompatMixin',
     'ImageCompatMixin',
     'ImageEndpointAPICompatMixin',
+    'LinkCompatMixin',
+    'LinkEndpointAPICompatMixin',
     'ManifestCompatMixin',
     'ManifestEndpointAPICompatMixin',
     'MarketplaceDemoCompatMixin',

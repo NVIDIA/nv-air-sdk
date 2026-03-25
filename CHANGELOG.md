@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.1.0] - 2026-02-24
+# [1.2.0] - 2026-03-25
+- Added `Checkpoint` model and `CheckpointEndpointAPI` to the SDK, enabling users to list, retrieve, update, and delete simulation checkpoints.
+- Changed stubs of delete method in `ServiceEndpointAPI` to accept service ID only
+- Introduced the Links endpoint as a proper RESTful resource, replacing the legacy connect()/disconnect() interface methods
+- Interface connection handling is now managed by the Links API
+- Fixed inconsistencies between the Manifest API and the SDK
+- Improved SDK warnings
+
+# [1.1.0] - 2026-02-24
 - Added support for breaking out network interfaces into sub-interfaces and reverting them back, implementing the v3 API breakout endpoints as interface actions
 - Added backward compatibility with legacy Air and to provide users with a way to store custom metadata
 - Fixed an issue that we were printing the user API key in ⁠with_ngc_config function

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from dataclasses import _MISSING_TYPE, MISSING, dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, DataDict
 from air_sdk.endpoints import mixins
@@ -97,7 +97,7 @@ class FleetEndpointAPI(
         search: str | _MISSING_TYPE = MISSING,
         ordering: str | _MISSING_TYPE = MISSING,
         **params: Any,
-    ) -> Iterator[Fleet]:
+    ) -> mixins.IndexableIterator[Fleet]:
         """List all fleets.
 
         Example

@@ -19,6 +19,9 @@ from air_sdk.endpoints.images import Image
 
 @dataclass(eq=False)
 class Manifest(BaseCompatMixin, ManifestCompatMixin, AirModel):
+    # Read-only in v3: set by API (e.g. from NGC)
+    _READ_ONLY_FIELDS = ['org_name']
+
     id: str
     org_name: str
     docker_run_parameters: dict[str, Any] = field(repr=False)

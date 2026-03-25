@@ -13,6 +13,7 @@ from typing import Any, Optional, Union
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc import BaseCompatMixin, ImageCompatMixin
 from air_sdk.bc.image import ImageEndpointAPICompatMixin
+from air_sdk.bc.utils import _caller_stacklevel
 from air_sdk.const import MAX_RECOMMENDED_UPLOAD_WORKERS
 from air_sdk.endpoints import mixins
 from air_sdk.helpers import image_upload
@@ -185,7 +186,7 @@ class ImageEndpointAPI(
                 f'max_workers={max_workers} is very high and may overwhelm '
                 f'network resources. Consider using 4-8 workers for optimal '
                 f'performance.',
-                stacklevel=2,
+                stacklevel=_caller_stacklevel(),
             )
 
         # Validate file exists and is readable

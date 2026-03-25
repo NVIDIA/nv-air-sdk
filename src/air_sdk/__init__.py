@@ -1,6 +1,18 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
+"""
+NVIDIA Air SDK.
+
+This is the API reference for the ``air_sdk`` package. Use the navigation
+to browse individual modules:
+
+- ``endpoints`` — per-resource docs (simulations, nodes, images, etc.)
+- ``const`` — SDK constants and configuration values
+- ``exceptions`` — error types raised by the SDK
+- ``types`` — TypedDict and enum definitions used in API payloads
+"""
+
 from __future__ import annotations
 
 from datetime import timedelta
@@ -24,6 +36,8 @@ __all__ = [
     'Resources',
     'SimState',
     # endpoints
+    'Checkpoint',
+    'CheckpointEndpointAPI',
     'ServiceAPI',
     'ServiceEndpointApi',
     'NodeApi',
@@ -32,6 +46,8 @@ __all__ = [
     'SimulationEndpointApi',
     'InterfaceApi',
     'InterfaceEndpointApi',
+    'LinkApi',
+    'LinkEndpointApi',
     'SimulationInterfaceApi',
     'SimulationNodeApi',
     'SystemEndpointAPI',
@@ -74,11 +90,13 @@ from air_sdk.types import (
 if TYPE_CHECKING:
     from air_sdk.bc import CloudInitEndpointAPI
     from air_sdk.endpoints import (
+        CheckpointEndpointAPI,
         FleetEndpointAPI,
         HistoryEndpointAPI,
         ImageEndpointAPI,
         ImageShareEndpointAPI,
         InterfaceEndpointAPI,
+        LinkEndpointAPI,
         ManifestEndpointAPI,
         MarketplaceDemoEndpointAPI,
         MarketplaceDemoTagEndpointAPI,
@@ -189,6 +207,12 @@ class AirApi:
             raise AirError(err_msg)
 
     @property
+    def checkpoints(self) -> CheckpointEndpointAPI:
+        from .endpoints import CheckpointEndpointAPI
+
+        return CheckpointEndpointAPI(self)
+
+    @property
     def histories(self) -> HistoryEndpointAPI:
         from .endpoints import HistoryEndpointAPI
 
@@ -243,6 +267,12 @@ class AirApi:
             'Use interface.breakout(split_count) to create breakouts, '
             'and interface.revert_breakout() to revert them.'
         )
+
+    @property
+    def links(self) -> LinkEndpointAPI:
+        from .endpoints import LinkEndpointAPI
+
+        return LinkEndpointAPI(self)
 
     @property
     def services(self) -> ServiceEndpointAPI:
@@ -350,6 +380,75 @@ class AirApi:
         """Resource Budget endpoint (alias for organizations)."""
         return self.organizations
 
+    # Unsupported endpoints
+
+    @property
+    def topologies(self) -> None:
+        """Topologies endpoint - not supported in current API version.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError(
+            'The topologies endpoint is not supported in the current API version. '
+            'Use AirApi.simulations to manage simulations directly.'
+        )
+
+    @property
+    def api_tokens(self) -> None:
+        """API Tokens endpoint - not supported in current API version.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError(
+            'The api_tokens endpoint is not supported in the '
+            'current API version. API tokens are now managed '
+            'through NGC (https://ngc.nvidia.com/).'
+        )
+
+    @property
+    def permissions(self) -> None:
+        """Permissions endpoint - not supported in current API version.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError(
+            'The permissions endpoint is not supported '
+            'in the current API version. '
+            'Permissions are now managed '
+            'through NGC (https://ngc.nvidia.com/).'
+        )
+
+    @property
+    def permission(self) -> None:
+        """Permission endpoint - not supported in current API version.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError(
+            'The permission endpoint is not supported '
+            'in the current API version. '
+            'Permission is now managed '
+            'through NGC (https://ngc.nvidia.com/).'
+        )
+
+    @property
+    def accounts(self) -> None:
+        """Accounts endpoint - not supported in current API version.
+
+        Raises:
+            NotImplementedError
+        """
+        raise NotImplementedError(
+            'The accounts endpoint is not supported '
+            'in the current API version. '
+            'Accounts are now managed '
+            'through NGC (https://ngc.nvidia.com/).'
+        )
+
     # Deprecated singular aliases (v1/v2 backward compatibility)
     # TODO: Remove these properties in a future major version
 
@@ -387,8 +486,11 @@ class AirApi:
 
 # Backward compatibility aliases (defined after AirApi to avoid circular imports)
 from air_sdk.endpoints import (  # noqa: E402
+    Checkpoint,
+    CheckpointEndpointAPI,
     ImageEndpointAPI,
     InterfaceEndpointAPI,
+    LinkEndpointAPI,
     MarketplaceDemoEndpointAPI,
     MarketplaceDemoTagEndpointAPI,
     NodeEndpointAPI,
@@ -417,6 +519,8 @@ MarketplaceDemoTagApi = MarketplaceDemoTagEndpointAPI  # v1 BC alias
 InterfaceApi = InterfaceEndpointAPI  # v1 BC alias
 InterfaceEndpointApi = InterfaceEndpointAPI  # v2 BC alias
 SimulationInterfaceApi = InterfaceEndpointAPI  # v1 BC alias
+LinkApi = LinkEndpointAPI  # v1 BC alias
+LinkEndpointApi = LinkEndpointAPI  # v2 BC alias
 SSHKeyApi = SSHKeyEndpointAPI  # v1 BC alias
 SimulationNodeApi = NodeEndpointAPI  # v1 BC alias
 NodeEndpointApi = NodeEndpointAPI  # v2 BC alias

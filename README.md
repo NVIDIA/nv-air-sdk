@@ -4,7 +4,9 @@ This project provides a Python SDK for interacting with the NVIDIA Air API.
 
 ## Documentation
 
-For detailed tutorials and examples on how to use the Air SDK, please refer to the [documentation README](./docs/README.md) in the `docs` directory. There you'll find Jupyter notebooks with code examples covering various SDK features such as ZTP scripts and simulation import/export.
+For the full SDK documentation, please refer to the [API & SDK](https://docs.nvidia.com/networking-ethernet-software/nvidia-air-v2/API-SDK/) page on NVIDIA docs.
+
+For tutorials and code examples, please refer to the [examples README](./docs/README.md) in the `docs` directory. There you will find Jupyter notebooks covering various SDK features such as ZTP scripts and simulation import/export.
 
 ## Prerequisite
 
@@ -24,23 +26,18 @@ python3.10 -m virtualenv venv
 ```
 
 
-## Installation (WIP)
+## Installation
 
-1. Clone this repo to `/path/to/air-sdk`
-2. Navigate to `/path/to/air-sdk`
-3. `pip install -e .`
+`pip install nv-air-sdk`
 
-## Authentication Options (WIP)
+## Authentication Options
 
 1. NGC Device Login with `AirApi.with_device_login(email=<YOUR_EMAIL>, org_num=<YOUR_NGC_ORG_NUMBER>)`
 2. NGC CLI Login with `AirApi.with_ngc_config()` (or just `AirApi()`)   
 3. Explicitly specify an NGC API Key (also known as a Starfleet API Key, or "SAK") by instantiating `AirApi.with_api_key(api_key=<YOUR_STARFLEET_API_KEY>)`
 
-To use options 2 or 3 you will need to **not be on the Northeast GlobalProtect region**
-
 And to use option 2 you will need to have the [NGC CLI](https://org.stg.ngc.nvidia.com/setup/installers/cli) installed and to have configured it with `ngc config set`. This will create a file at `~/.ngc/config` which contains your NGC credentials that will be auto-detected by the Air SDK.
 
-We do not support NGC service keys yet.
 
 ## License
 

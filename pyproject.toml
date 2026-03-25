@@ -15,10 +15,6 @@ include = ["src/air_sdk/py.typed"]
 exclude = [
     "tests/",
     "ngci_build/",
-    ".coderabbit.yaml",
-    ".gitlab-ci.yml",
-    ".pulse-trufflehog-allowlist.json",
-    "DEVELOPMENT.md",
 ]
 
 [tool.poetry.dependencies]
@@ -39,6 +35,12 @@ types-python-dateutil = "^2.9.0.20241206"
 types-requests = "^2.32.0.20250306"
 ipykernel = "^6.29.5"
 requests-mock = "*"
+
+[tool.poetry.group.docs.dependencies]
+sphinx = "^8.1"
+nvidia-sphinx-theme = "^0.0"
+sphinx-autoapi = "^3.4"
+nbsphinx = "^0.9"
 
 [build-system]
 requires = ["poetry-core"]

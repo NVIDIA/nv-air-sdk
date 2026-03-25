@@ -1,16 +1,15 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 """Backward compatibility for Service endpoint."""
 
 from __future__ import annotations
 
-import warnings
 from typing import TYPE_CHECKING, Any
 
 from air_sdk.bc.base import AirModelCompatMixin
 from air_sdk.bc.decorators import deprecated
-from air_sdk.bc.utils import drop_removed_fields, map_field_names
+from air_sdk.bc.utils import deprecation_warn, drop_removed_fields, map_field_names
 
 if TYPE_CHECKING:
     from air_sdk.air_model import PrimaryKey
@@ -117,12 +116,10 @@ class ServiceEndpointAPICompatMixin:
                     'a simulation context. Please provide the simulation parameter.'
                 )
 
-            warnings.warn(
+            deprecation_warn(
                 "Using 'node:interface' string format is deprecated. "
                 "Use sim.create_service(node_name='name', interface_name='name', ...) "
-                'or provide an explicit interface ID.',
-                DeprecationWarning,
-                stacklevel=3,
+                'or provide an explicit interface ID.'
             )
 
             kwargs['interface'] = self._resolve_interface_string(

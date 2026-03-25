@@ -142,10 +142,8 @@ class ManifestEndpointAPI(BaseEndpointAPI[Manifest]):
     def list(
         self,
         *,
-        id: str = ...,
-        org_name: str = ...,
+        simulator_image: Image | str = ...,
         emulation_type: str = ...,
-        port_mapping_required: bool = ...,
         limit: int = ...,
         offset: int = ...,
         ordering: str = ...,
@@ -155,10 +153,8 @@ class ManifestEndpointAPI(BaseEndpointAPI[Manifest]):
         """List all manifests with optional filtering.
 
         Args:
-            id: Filter by manifest ID
-            org_name: Filter by organization name
+            simulator_image: Filter by simulator image (Image or image ID)
             emulation_type: Filter by emulation type
-            port_mapping_required: Filter by port mapping requirement (V2 BC field)
             limit: Number of results to return per page
             offset: The initial index from which to return the results
             ordering: Order objects by field. Prefix with "-" for desc order
@@ -175,7 +171,11 @@ class ManifestEndpointAPI(BaseEndpointAPI[Manifest]):
 
             >>> # Filter by emulation type
             >>> for manifest in api.manifests.list(emulation_type='NIC_INFINIBAND'):
-                ...     print(manifest.org_name)
+            ...     print(manifest.org_name)
+
+            >>> # Filter by simulator image
+            >>> for manifest in api.manifests.list(simulator_image='image-id'):
+            ...     print(manifest.id)
 
             >>> # Search and order
             >>> for manifest in api.manifests.list(search='cumulus', ordering='-created'):

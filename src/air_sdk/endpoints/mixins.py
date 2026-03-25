@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
@@ -15,10 +15,13 @@ from typing import (
     List,
     Optional,
     TypedDict,
+    TypeVar,
 )
 
 from air_sdk.air_json_encoder import AirJSONEncoder
 from air_sdk.air_model import DataDict, PrimaryKey, TAirModel_co
+from air_sdk.bc.decorators import deprecated
+from air_sdk.bc.utils import _caller_stacklevel
 from air_sdk.exceptions import AirModelAttributeError
 from air_sdk.utils import filter_missing, join_urls, raise_if_invalid_response
 
@@ -78,39 +81,84 @@ class PaginatedResponseData(TypedDict):
     results: List[DataDict]
 
 
+_T = TypeVar('_T')
+
+
+class IndexableIterator(Iterator[_T]):
+    """Iterator wrapper that supports ``__getitem__`` for backward compatibility.
+
+    Allows legacy code like ``api.images.list()[0]`` to keep working
+    while emitting a `DeprecationWarning` guiding users toward
+    ``next(api.images.list())`` or ``for`` loops instead.
+    """
+
+    def __init__(self, gen: Iterator[_T]) -> None:
+        self._gen = gen
+        self._first: Optional[_T] = None
+
+    def __next__(self) -> _T:
+        return next(self._gen)
+
+    @deprecated(
+        'Indexing the result of .list() is deprecated. '
+        'Use next(api.<endpoint>.list()) to get the next '
+        'result, list(api.<endpoint>.list()) to get all '
+        'results as a list or iterate with a for loop.'
+    )
+    def __getitem__(self, index: int) -> _T:
+        if index != 0:
+            raise IndexError(
+                'Only index 0 is supported. '
+                'Use list(api.<endpoint>.list()) to get all '
+                'results as a list or iterate with a for loop.'
+            )
+        if self._first is None:
+            try:
+                self._first = next(self._gen)
+            except StopIteration:
+                raise IndexError(0) from None
+        return self._first
+
+
 class ListApiMixin(BaseApiMixin, Generic[TAirModel_co]):
     """Returns an iterable of model objects.
 
     Handles pagination in the background.
     """
 
-    def list(self, **params: Any) -> Iterator[TAirModel_co]:
-        """Return an iterator of model instances."""
+    def _paginate(self, params: Dict[str, Any]) -> Iterator[TAirModel_co]:
+        """Yield model instances across all paginated responses."""
+        url: Optional[str] = self.url
+        next_url: Optional[str] = None
+        while url or next_url:
+            if isinstance(next_url, str):
+                response = self.__api__.client.get(next_url)
+            else:
+                assert url is not None
+                response = self.__api__.client.get(url, params=params)
+            raise_if_invalid_response(response)
+            data: PaginatedResponseData = response.json()
+            url = None
+            next_url = data['next']
+            for obj_data in data['results']:
+                yield self.load_model(obj_data)
+
+    def list(self, **params: Any) -> IndexableIterator[TAirModel_co]:
+        """Return an indexable iterator of model instances."""
         # Filter out MISSING sentinel values
         params = filter_missing(**params)
 
-        url = self.url
         # Merge default filters with provided params (params take precedence)
         if hasattr(self, 'default_filters') and isinstance(self.default_filters, dict):
             for key, value in self.default_filters.items():
                 params.update(self.default_filters)
         # Set up pagination
-        next_url = None
         params.setdefault('limit', self.__api__.client.pagination_page_size)
         params = json.loads(
             serialize_payload(params)
         )  # Accounts for UUIDs and AirModel params
-        while url or next_url:
-            if isinstance(next_url, str):
-                response = self.__api__.client.get(next_url)
-            else:
-                response = self.__api__.client.get(url, params=params)
-            raise_if_invalid_response(response)
-            paginated_response_data: PaginatedResponseData = response.json()
-            url = None  # type: ignore[assignment]
-            next_url = paginated_response_data['next']
-            for obj_data in paginated_response_data['results']:
-                yield self.load_model(obj_data)
+
+        return IndexableIterator(self._paginate(params))
 
 
 class CreateApiMixin(BaseApiMixin, Generic[TAirModel_co]):
@@ -149,7 +197,7 @@ class PutApiMixin(BaseApiMixin, Generic[TAirModel_co]):
             warnings.warn(
                 f'PUT response missing required fields for {self.__class__.__name__} '
                 f'with pk={pk}, falling back to GET request',
-                stacklevel=2,
+                stacklevel=_caller_stacklevel(),
             )
             return self.get(pk)  # type: ignore[attr-defined,no-any-return]
 
@@ -170,7 +218,7 @@ class PatchApiMixin(BaseApiMixin, Generic[TAirModel_co]):
             warnings.warn(
                 f'PATCH response missing required fields for {self.__class__.__name__} '
                 f'with pk={pk}, falling back to GET request',
-                stacklevel=2,
+                stacklevel=_caller_stacklevel(),
             )
             return self.get(pk)  # type: ignore[attr-defined,no-any-return]
 

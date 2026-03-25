@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -13,8 +13,10 @@ from pathlib import Path
 from typing import Any, Iterator, List, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
+from air_sdk.endpoints.checkpoints import CheckpointEndpointAPI
 from air_sdk.endpoints.history import History
 from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+from air_sdk.endpoints.links import LinkEndpointAPI
 from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 from air_sdk.endpoints.nodes import NodeEndpointAPI
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
@@ -471,6 +473,19 @@ class Simulation(AirModel):
         ...
 
     @property
+    def links(self) -> LinkEndpointAPI:
+        """Query for the related links of the simulation.
+
+        Returns:
+            LinkEndpointAPI instance filtered for this simulation's links
+
+        Example:
+            >>> for link in simulation.links.list():
+            ...     print(link.interfaces[0].name, link.interfaces[1].name)
+        """
+        ...
+
+    @property
     def node_instructions(self) -> NodeInstructionEndpointAPI:
         """Query for the related node instructions of the simulation.
 
@@ -502,6 +517,20 @@ class Simulation(AirModel):
         """
         ...
     # fmt: on
+    @property
+    def checkpoints(self) -> CheckpointEndpointAPI:
+        """Query for the related checkpoints of the simulation.
+
+        Returns:
+            CheckpointEndpointAPI instance filtered for this simulation's
+            checkpoints
+
+        Example:
+            >>> for cp in simulation.checkpoints.list():
+            ...     print(cp.name, cp.state)
+        """
+        ...
+
     def create_service(
         self,
         *,

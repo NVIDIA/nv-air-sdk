@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload
 
 if TYPE_CHECKING:
     from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+    from air_sdk.endpoints.links import LinkEndpointAPI
     from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
     from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 
@@ -109,6 +110,12 @@ class Node(BaseCompatMixin, NodeCompatMixin, AirModel):
         return InterfaceEndpointAPI(
             self.__api__, default_filters={'node': str(self.__pk__)}
         )
+
+    @property
+    def links(self) -> LinkEndpointAPI:
+        from air_sdk.endpoints.links import LinkEndpointAPI
+
+        return LinkEndpointAPI(self.__api__, default_filters={'node': str(self.__pk__)})
 
 
 class NodeEndpointAPI(

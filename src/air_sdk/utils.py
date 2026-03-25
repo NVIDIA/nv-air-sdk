@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
@@ -95,6 +95,8 @@ def datetime_to_iso_string(date: datetime) -> str:
     """
     import warnings
 
+    from air_sdk.bc.utils import _caller_stacklevel
+
     # Handle naive datetimes by assuming local timezone and warning
     if date.tzinfo is None:
         warnings.warn(
@@ -102,7 +104,7 @@ def datetime_to_iso_string(date: datetime) -> str:
             'Assuming local timezone. '
             'Use datetime.now(timezone.utc) for explicit UTC times.',
             UserWarning,
-            stacklevel=2,
+            stacklevel=_caller_stacklevel(),
         )
         # Assume local timezone
         date = date.astimezone()
@@ -349,7 +351,6 @@ def raise_if_invalid_response(
     """
     json = None
     if res.status_code != status_code:
-        # logger.debug(res.text)
         raise AirUnexpectedResponse(message=res.text, status_code=res.status_code)
     if not data_type:
         return

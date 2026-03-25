@@ -8,7 +8,6 @@ Simulation-specific backward compatibility for v1/v2 SDK.
 
 from __future__ import annotations
 
-import warnings
 from datetime import timedelta
 from typing import TYPE_CHECKING, Any, cast
 
@@ -16,6 +15,7 @@ from air_sdk.air_model import PrimaryKey
 from air_sdk.bc.base import AirModelCompatMixin
 from air_sdk.bc.decorators import deprecated
 from air_sdk.bc.utils import (
+    deprecation_warn,
     drop_removed_fields,
     handle_boolean_datetime_fields,
     map_field_names,
@@ -75,12 +75,10 @@ class SimulationState(str):
         if other in self._OLD_TO_NEW:
             # Warn about deprecated state name usage
             mapped_states = ', '.join(self._OLD_TO_NEW[other])
-            warnings.warn(
+            deprecation_warn(
                 f"Simulation state '{other}' is deprecated and is being mapped to "
                 f'new state(s): {mapped_states}. '
-                f'Please update your code to use the new state names.',
-                DeprecationWarning,
-                stacklevel=2,
+                f'Please update your code to use the new state names.'
             )
             return str(self) in self._OLD_TO_NEW[other]
 
@@ -171,8 +169,6 @@ class SimulationCompatMixin(AirModelCompatMixin):
         if name == 'expires':
             return super().__getattribute__('expires_at') is not None
 
-        # Let base mixin handle field mappings and removed fields
-        # This will eventually call the parent's __getattribute__
         return super().__getattr__(name)
 
     def update(self, *args: Any, **kwargs: Any) -> None:
@@ -604,11 +600,9 @@ class SimulationEndpointAPICompatMixin:
                         )
 
                 # v1/v2 create(topology_data=...) always used DOT format
-                warnings.warn(
+                deprecation_warn(
                     'create(topology_data=...) is deprecated. '
-                    'Use import_from_dot(topology_data=...) instead.',
-                    category=DeprecationWarning,
-                    stacklevel=2,
+                    'Use import_from_dot(topology_data=...) instead.'
                 )
                 return self.import_from_dot(topology_data=content, **kwargs)  # type: ignore[attr-defined]
 

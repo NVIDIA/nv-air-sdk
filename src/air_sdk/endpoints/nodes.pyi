@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -15,6 +15,7 @@ from air_sdk.bc.cloud_init import CloudInit
 from air_sdk.endpoints import UserConfig
 from air_sdk.endpoints.images import Image
 from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+from air_sdk.endpoints.links import LinkEndpointAPI
 from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation
@@ -208,6 +209,19 @@ class Node(AirModel):
             >>> node = api.nodes.get('node-id')
             >>> for interface in node.interfaces.list():
             ...     print(interface.name)
+        """
+        ...
+
+    @property
+    def links(self) -> LinkEndpointAPI:
+        """Access the links endpoint for this node.
+
+        Returns:
+            LinkEndpointAPI instance filtered for this node's links
+
+        Example:
+            >>> for link in node.links.list():
+            ...     print(link.id)
         """
         ...
 

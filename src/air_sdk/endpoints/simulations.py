@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
@@ -34,7 +34,9 @@ from air_sdk.utils import (
 from air_sdk.utils import wait_for_state as wait_for_state_util
 
 if TYPE_CHECKING:
+    from air_sdk.endpoints.checkpoints import CheckpointEndpointAPI
     from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+    from air_sdk.endpoints.links import LinkEndpointAPI
     from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
     from air_sdk.endpoints.nodes import NodeEndpointAPI
     from air_sdk.endpoints.services import Service, ServiceEndpointAPI
@@ -183,6 +185,14 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
         )
 
     @property
+    def links(self) -> LinkEndpointAPI:
+        from air_sdk.endpoints.links import LinkEndpointAPI
+
+        return LinkEndpointAPI(
+            self.__api__, default_filters={'simulation': str(self.__pk__)}
+        )
+
+    @property
     def node_instructions(self) -> NodeInstructionEndpointAPI:
         from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 
@@ -195,6 +205,14 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
         from air_sdk.endpoints.services import ServiceEndpointAPI
 
         return ServiceEndpointAPI(
+            self.__api__, default_filters={'simulation': str(self.__pk__)}
+        )
+
+    @property
+    def checkpoints(self) -> CheckpointEndpointAPI:
+        from air_sdk.endpoints.checkpoints import CheckpointEndpointAPI
+
+        return CheckpointEndpointAPI(
             self.__api__, default_filters={'simulation': str(self.__pk__)}
         )
 

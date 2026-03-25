@@ -5,9 +5,13 @@
 Constants shared throughout the SDK.
 """
 
+import os
 from datetime import timedelta
 from enum import Enum
 from urllib.parse import ParseResult, urlparse
+
+SDK_ROOT = os.path.dirname(os.path.abspath(__file__))
+MAX_STACKLEVEL = 20
 
 DEFAULT_CONNECT_TIMEOUT = timedelta(seconds=16)
 DEFAULT_READ_TIMEOUT = timedelta(seconds=61)

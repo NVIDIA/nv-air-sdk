@@ -29,6 +29,7 @@ from typing import (
 )
 from uuid import UUID
 
+from air_sdk.bc.utils import _caller_stacklevel
 from air_sdk.exceptions import AirError, AirModelAttributeError
 from air_sdk.types import (
     get_list_arg,
@@ -405,16 +406,16 @@ class BaseEndpointAPI(EndpointMethodMixin, Generic[TAirModel_co]):
             # Set extra API fields that are not in the SDK model as dynamic attributes
             # This allows access to new API fields before SDK is updated
             extra_fields = set(data) - model_field_names
+
+            # Collect fields that need warnings
+            skipped_reserved_fields: list[str] = []
+            failed_unexpected_fields: list[str] = []
+
             for field_name in extra_fields:
                 # Skip dunder attributes and other potentially dangerous names
                 # Prevents API from overwriting SDK methods like .json() or .dict
                 if field_name.startswith('_') or field_name in ('dict', 'json'):
-                    warnings.warn(
-                        f"API returned field '{field_name}' which is reserved by the "
-                        f'SDK. Skipping to avoid conflicts. Consider updating your SDK.',
-                        UserWarning,
-                        stacklevel=4,
-                    )
+                    skipped_reserved_fields.append(field_name)
                     continue
 
                 # Skip fields that are already defined as properties
@@ -429,13 +430,29 @@ class BaseEndpointAPI(EndpointMethodMixin, Generic[TAirModel_co]):
 
                 try:
                     setattr(model_inst, field_name, data[field_name])
-                except AttributeError as e:
-                    warnings.warn(
-                        f"API returned extra field '{field_name}' but the SDK failed to "
-                        f'assign it: {e}. Consider updating your SDK.',
-                        UserWarning,
-                        stacklevel=4,
-                    )
+                except AttributeError:
+                    # Collect AttributeErrors for aggregated warning
+                    failed_unexpected_fields.append(field_name)
+
+            # Generate aggregated warnings
+            if skipped_reserved_fields:
+                field_list = ', '.join(repr(f) for f in skipped_reserved_fields)
+                warnings.warn(
+                    f'API returned reserved field(s) {field_list} which are reserved '
+                    f'by the SDK. Skipping to avoid conflicts. '
+                    f'Consider updating your SDK.',
+                    UserWarning,
+                    stacklevel=_caller_stacklevel(),
+                )
+
+            if failed_unexpected_fields:
+                field_list = ', '.join(repr(f) for f in failed_unexpected_fields)
+                warnings.warn(
+                    f'API returned extra field(s) {field_list} but the SDK failed '
+                    f'to assign them. Consider updating your SDK.',
+                    UserWarning,
+                    stacklevel=_caller_stacklevel(),
+                )
             return model_inst
         except TypeError as e:
             raise AirModelAttributeError(
@@ -535,7 +552,7 @@ class BaseEndpointAPI(EndpointMethodMixin, Generic[TAirModel_co]):
             warnings.warn(
                 f'{context}: {e}. Using raw value from API. Consider updating your SDK.',
                 UserWarning,
-                stacklevel=4,
+                stacklevel=_caller_stacklevel(),
             )
             return provided_value  # type: ignore
 

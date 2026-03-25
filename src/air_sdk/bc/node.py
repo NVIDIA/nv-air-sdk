@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -7,18 +7,51 @@
 from __future__ import annotations
 
 import json
-import warnings
 from typing import TYPE_CHECKING, Any
 
 from air_sdk.bc.base import AirModelCompatMixin
 from air_sdk.bc.decorators import deprecated
-from air_sdk.bc.utils import drop_removed_fields, map_field_names
+from air_sdk.bc.utils import deprecation_warn, drop_removed_fields, map_field_names
 from air_sdk.types import NodeAssignmentDataV3
 from air_sdk.utils import raise_if_invalid_response
 
 if TYPE_CHECKING:
     from air_sdk.bc import CloudInit
     from air_sdk.endpoints.simulations import Simulation
+
+
+def _inject_management_fields_into_metadata(data: dict[str, Any]) -> None:
+    """Inject management_ip and management_mac into metadata for v1/v2 BC.
+
+    In v1/v2, the Node metadata contained ``mgmt_ip`` and ``mgmt_mac``.
+    In v3, these are separate top-level fields. This merges them back into
+    the metadata JSON string so legacy consumers that read metadata still
+    find the values they expect.
+
+    Args:
+        data: Raw API response dict to modify in-place.
+    """
+    mgmt_ip = data.get('management_ip')
+    mgmt_mac = data.get('management_mac')
+
+    if mgmt_ip is None and mgmt_mac is None:
+        return
+
+    metadata_str = data.get('metadata')
+    try:
+        parsed_metadata = json.loads(metadata_str) if metadata_str else {}
+    except (json.JSONDecodeError, TypeError):
+        return
+
+    if not isinstance(parsed_metadata, dict):
+        return
+
+    if mgmt_ip is not None and 'mgmt_ip' not in parsed_metadata:
+        parsed_metadata['mgmt_ip'] = mgmt_ip
+    if mgmt_mac is not None and 'mgmt_mac' not in parsed_metadata:
+        parsed_metadata['mgmt_mac'] = mgmt_mac
+
+    data['metadata'] = json.dumps(parsed_metadata)
 
 
 def _map_features_field_to_advanced_field(kwargs: dict[str, Any]) -> None:
@@ -357,7 +390,18 @@ class NodeEndpointAPICompatMixin:
         update_simulation_node(),
         get_simulation_nodes()
     - v2 unsupported methods: bulk_update_state(), bulk_update_keydisk()
+    - Metadata BC: injects mgmt_ip/mgmt_mac into metadata
     """
+
+    def load_model(self, data: dict[str, Any]) -> Any:
+        """Load a Node model with v1/v2 metadata backward compatibility.
+
+        Injects ``mgmt_ip`` and ``mgmt_mac`` into the metadata JSON string
+        from the v3 ``management_ip`` and ``management_mac`` fields so that
+        legacy consumers reading metadata still find these values.
+        """
+        _inject_management_fields_into_metadata(data)
+        return super().load_model(data)  # type: ignore[misc]
 
     def create(self, *args: Any, **kwargs: Any) -> Any:
         """Create a node with v1/v2 backward compatibility.
@@ -393,11 +437,9 @@ class NodeEndpointAPICompatMixin:
             system = kwargs.pop('system')
             if system is not None:
                 # Warn about deprecated usage
-                warnings.warn(
+                deprecation_warn(
                     "Passing 'system' to create() is deprecated. "
-                    'Use create_from_system_node() instead.',
-                    DeprecationWarning,
-                    stacklevel=2,
+                    'Use create_from_system_node() instead.'
                 )
                 # Redirect to create_from_system_node endpoint
                 return self.create_from_system_node(system_node=system, *args, **kwargs)  # type: ignore[attr-defined]
@@ -443,11 +485,9 @@ class NodeEndpointAPICompatMixin:
             and will be removed in a future version.
         """
         if 'simulation_id' in kwargs:
-            warnings.warn(
+            deprecation_warn(
                 "Passing 'simulation_id' to get() is unnecessary. "
-                'Node IDs are globally unique - just use get(node_id). ',
-                DeprecationWarning,
-                stacklevel=2,
+                'Node IDs are globally unique - just use get(node_id). '
             )
             # Remove it entirely - don't pass it to v3 API
             kwargs.pop('simulation_id')

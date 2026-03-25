@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
@@ -9,6 +9,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from air_sdk.endpoints.links import LinkEndpointAPI
     from air_sdk.endpoints.services import ServiceEndpointAPI
 
 from air_sdk.air_model import (
@@ -23,7 +24,7 @@ from air_sdk.bc import (
 )
 from air_sdk.endpoints import mixins
 from air_sdk.endpoints.nodes import Node
-from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload_types
+from air_sdk.utils import raise_if_invalid_response, validate_payload_types
 
 
 @dataclass
@@ -55,12 +56,13 @@ class Interface(BaseCompatMixin, InterfaceCompatMixin, AirModel):
         """The current model API instance."""
         return self.get_model_api()(self.__api__)
 
-    @validate_payload_types
-    def connect(self, *, target: Interface | PrimaryKey) -> Interface:
-        return self.model_api.connect(interface=self, target=target)
+    @property
+    def links(self) -> LinkEndpointAPI:
+        from air_sdk.endpoints.links import LinkEndpointAPI
 
-    def disconnect(self) -> Interface:
-        return self.model_api.disconnect(interface=self)
+        return LinkEndpointAPI(
+            self.__api__, default_filters={'interface': str(self.__pk__)}
+        )
 
     def breakout(self, **kwargs: Any) -> list[Interface]:
         return self.model_api.breakout(interface=self, **kwargs)
@@ -87,46 +89,9 @@ class InterfaceEndpointAPI(
     BaseEndpointAPI[Interface],
 ):
     API_PATH = 'simulations/nodes/interfaces/'
-    SET_CONNECTION_PATH = 'set-connection'
     BREAKOUT_PATH = 'breakout'
     REVERT_BREAKOUT_PATH = 'revert-breakout'
     model = Interface
-
-    def set_connection(
-        self,
-        interface: Interface | PrimaryKey,
-        target: Interface | PrimaryKey | None,
-    ) -> Interface:
-        """Helper method to set or clear interface connection.
-
-        Args:
-            interface: The interface to modify
-            target: The target interface to connect to, or None to disconnect
-
-        Returns:
-            The updated interface
-        """
-        interface_id = interface.id if isinstance(interface, Interface) else interface
-        url = join_urls(self.url, str(interface_id), self.SET_CONNECTION_PATH)
-        response = self.__api__.client.patch(
-            url, data=mixins.serialize_payload({'target': target})
-        )
-        raise_if_invalid_response(response, status_code=HTTPStatus.OK)
-        if isinstance(interface, Interface):
-            interface.refresh()
-        if isinstance(target, Interface):
-            target.refresh()
-        return self.load_model(response.json())
-
-    @validate_payload_types
-    def connect(
-        self, *, interface: Interface | PrimaryKey, target: Interface | PrimaryKey
-    ) -> Interface:
-        return self.set_connection(interface, target)
-
-    @validate_payload_types
-    def disconnect(self, *, interface: Interface | PrimaryKey) -> Interface:
-        return self.set_connection(interface, None)
 
     @validate_payload_types
     def breakout(

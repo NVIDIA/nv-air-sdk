@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -9,6 +9,7 @@ Base backward compatibility mixin for common v1/v2 SDK patterns.
 from typing import Any
 
 from air_sdk.bc.decorators import deprecated
+from air_sdk.bc.utils import deprecation_warn
 
 
 class BaseCompatMixin:
@@ -87,6 +88,11 @@ class AirModelCompatMixin:
         field_mappings = getattr(self.__class__, '_FIELD_MAPPINGS', {})
         if name in field_mappings:
             new_name: str = field_mappings[name]
+            deprecation_warn(
+                f"The attribute '{name}' has been renamed to '{new_name}' "
+                f'in the current air-api version. '
+                f'Please update your code to use the new name.'
+            )
             return new_name
 
         return name

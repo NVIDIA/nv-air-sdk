@@ -10,6 +10,43 @@ import inspect
 import warnings
 from typing import Any, Callable
 
+from air_sdk.const import MAX_STACKLEVEL, SDK_ROOT
+
+
+def _caller_stacklevel() -> int:
+    """Find the stacklevel that points to the first frame outside the SDK.
+
+    Walks the call stack to find the first frame whose file is not inside
+    the air_sdk package. This avoids hardcoding stacklevel values that
+    break when the internal call chain depth varies.
+
+    The returned value accounts for the fact that this function's own
+    frame will be gone by the time warnings.warn() uses the stacklevel.
+
+    Returns:
+        The stacklevel to pass to warnings.warn().
+        Falls back to 1 if no external frame is found.
+    """
+    for i, frame_info in enumerate(inspect.stack(), 1):
+        if i > MAX_STACKLEVEL:
+            break
+        if not frame_info.filename.startswith(SDK_ROOT):
+            return max(i - 1, 1)
+    return 1
+
+
+def deprecation_warn(message: str) -> None:
+    """Emit a DeprecationWarning that points to the caller's code.
+
+    Automatically determines the correct stacklevel so the warning
+    points to the first frame outside the SDK, regardless of how
+    deep the internal call chain is.
+
+    Args:
+        message: The deprecation warning message.
+    """
+    warnings.warn(message, DeprecationWarning, stacklevel=_caller_stacklevel())
+
 
 # NOTE: This function is currently not in use because we use .pyi stub files
 # for type hints, which means inspect.signature() cannot extract the actual
@@ -57,7 +94,6 @@ def drop_removed_fields(
     removed_fields: list[str],
     critical_fields: list[str] | None = None,
     exclude_fields: list[str] | None = None,
-    stacklevel: int = 4,
 ) -> None:
     # fmt: off
     """Drop fields that were removed in v3 and warn user.
@@ -67,7 +103,6 @@ def drop_removed_fields(
         removed_fields: List of field names that are not supported (will warn)
         critical_fields: List of field names that will raise an exception if present
         exclude_fields: List of field names to keep even if in removed_fields
-        stacklevel: Stack level for the warning (default: 4)
 
     Raises:
         ValueError: If any critical_fields are present in kwargs
@@ -129,26 +164,22 @@ def drop_removed_fields(
 
     if dropped_fields:
         dropped_fields_str = ', '.join(f"'{field}'" for field in dropped_fields)
-        warnings.warn(
+        deprecation_warn(
             f'The following parameters are not supported in the current air-api '
             f'version and will be ignored: {dropped_fields_str}. '
-            f'These parameters were available in older air-api versions.',
-            DeprecationWarning,
-            stacklevel=stacklevel,
+            f'These parameters were available in older air-api versions.'
         )
 
 
 def map_field_names(
     kwargs: dict[str, Any],
     field_mappings: dict[str, str],
-    stacklevel: int = 4,
 ) -> None:
     """Map v1/v2 field names to v3 equivalents.
 
     Args:
         kwargs: Dictionary of keyword arguments to modify in-place
         field_mappings: Dictionary mapping old field names to new ones
-        stacklevel: Stack level for the warning (default: 4)
 
     Example:
         >>> kwargs = {'title': 'My Sim', 'owner': 'user@example.com'}
@@ -157,21 +188,24 @@ def map_field_names(
         >>> kwargs
         {'name': 'My Sim', 'creator': 'user@example.com'}
     """
+    mapped_fields: list[str] = []
     for old_name, new_name in field_mappings.items():
         if old_name in kwargs:
-            warnings.warn(
-                f'The field name "{old_name}" has been changed to "{new_name}" in the '
-                f'current air-api version. Please update your code to use the new name.',
-                DeprecationWarning,
-                stacklevel=stacklevel,
-            )
             kwargs[new_name] = kwargs.pop(old_name)
+            mapped_fields.append(f'{old_name} -> {new_name}')
+
+    if mapped_fields:
+        fields_str = ', '.join(mapped_fields)
+        deprecation_warn(
+            f'The following field name(s) have been changed in the current '
+            f'air-api version: {fields_str}. '
+            f'Please update your code to use the new names.'
+        )
 
 
 def handle_boolean_datetime_fields(
     kwargs: dict[str, Any],
     field_mappings: dict[str, str],
-    stacklevel: int = 4,
 ) -> None:
     """Handle boolean fields that should be datetime fields (v1/v2 → v3 compatibility).
 
@@ -182,7 +216,6 @@ def handle_boolean_datetime_fields(
         kwargs: Dictionary of keyword arguments to modify in-place
         field_mappings: Mapping of boolean field names to datetime field names
                        Example: {'sleep': 'sleep_at', 'expires': 'expires_at'}
-        stacklevel: Stack level for warnings (default: 4)
 
     Example:
         >>> # Convert False to None
@@ -229,30 +262,24 @@ def handle_boolean_datetime_fields(
 
     # Warn about fields ignored because datetime field was provided
     if ignored_fields:
-        warnings.warn(
+        deprecation_warn(
             f'Ignored boolean field(s): {", ".join(ignored_fields)}. '
-            f'The datetime field takes precedence.',
-            DeprecationWarning,
-            stacklevel=stacklevel,
+            f'The datetime field takes precedence.'
         )
 
     # Warn about fields that were automatically converted
     if converted_fields:
-        warnings.warn(
+        deprecation_warn(
             f'Automatically converted: {", ".join(converted_fields)}. '
-            f'Consider using the datetime field equivalents directly.',
-            DeprecationWarning,
-            stacklevel=stacklevel,
+            f'Consider using the datetime field equivalents directly.'
         )
 
     # Warn about True values that couldn't be converted
     if true_fields:
         datetime_fields = [field_mappings[field] for field in true_fields]
         datetime_fields_str = ', '.join(f"'{field}'" for field in datetime_fields)
-        warnings.warn(
+        deprecation_warn(
             f'The {", ".join(true_fields)} boolean parameter(s) are not '
             f'supported in the current air-api version. Use '
-            f'{datetime_fields_str} with datetime values instead.',
-            DeprecationWarning,
-            stacklevel=stacklevel,
+            f'{datetime_fields_str} with datetime values instead.'
         )

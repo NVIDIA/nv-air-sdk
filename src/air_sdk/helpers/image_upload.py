@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 """
 Helper functions for image upload operations.
@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 import requests
 
+from air_sdk.bc.utils import _caller_stacklevel
 from air_sdk.const import (
     DEFAULT_RETRY_ATTEMPTS,
     DEFAULT_RETRY_BACKOFF_FACTOR,
@@ -72,13 +73,13 @@ def abort_multipart_upload(
             warnings.warn(
                 f'Failed to abort multipart upload '
                 f'for image {image.id}: HTTP {abort_response.status_code}. ',
-                stacklevel=3,
+                stacklevel=_caller_stacklevel(),
             )
     except Exception as e:
         # Catch all exceptions to prevent masking the original error
         warnings.warn(
             f'Exception while aborting multipart upload for image {image.id}: {e}. ',
-            stacklevel=3,
+            stacklevel=_caller_stacklevel(),
         )
 
 
@@ -174,7 +175,7 @@ def upload_single_part(
                 warnings.warn(
                     f'Part {part_number} upload failed ({retry_reason}). '
                     f'Retrying in {wait_time}s (attempt {attempt + 1}/{max_retries})',
-                    stacklevel=4,
+                    stacklevel=_caller_stacklevel(),
                 )
                 time.sleep(wait_time)
                 continue

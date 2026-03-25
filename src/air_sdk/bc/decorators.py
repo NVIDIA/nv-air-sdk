@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -6,9 +6,10 @@
 Decorators for backward compatibility layer.
 """
 
-import warnings
 from functools import wraps
 from typing import Any, Callable, TypeVar, cast
+
+from air_sdk.bc.utils import deprecation_warn
 
 F = TypeVar('F', bound=Callable[..., Any])
 
@@ -31,7 +32,7 @@ def deprecated(message: str) -> Callable[[F], F]:
     def decorator(func: F) -> F:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            warnings.warn(message, category=DeprecationWarning, stacklevel=2)
+            deprecation_warn(message)
             return func(*args, **kwargs)
 
         return cast(F, wrapper)

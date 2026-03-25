@@ -1,8 +1,18 @@
 # SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
+"""
+API endpoint modules.
+
+Each module contains a resource model (e.g. ``Simulation``, ``Node``) and
+its corresponding endpoint API class (e.g. ``SimulationEndpointAPI``).
+Access these through :class:`~air_sdk.AirApi` properties rather than
+importing directly.
+"""
 
 __all__ = [
+    'Checkpoint',
+    'CheckpointEndpointAPI',
     'CloudInit',
     'CloudInitEndpointAPI',
     'Fleet',
@@ -22,6 +32,8 @@ __all__ = [
     'Simulation',
     'SimulationEndpointAPI',
     'InterfaceEndpointAPI',
+    'Link',
+    'LinkEndpointAPI',
     'ManifestEndpointAPI',
     'SimulationApi',  # BC alias for v1
     'SimulationEndpointApi',  # BC alias for v2
@@ -35,6 +47,8 @@ __all__ = [
     'MarketplaceDemoTagEndpointAPI',
     'InterfaceApi',  # BC alias for v1
     'InterfaceEndpointApi',  # BC alias for v2
+    'LinkApi',  # BC alias for v1
+    'LinkEndpointApi',  # BC alias for v2
     'SimulationInterfaceApi',  # BC alias for v1
     'SSHKeyEndpointAPI',
     'Training',
@@ -73,6 +87,7 @@ __all__ = [
 
 from air_sdk.bc.cloud_init import CloudInit, CloudInitEndpointAPI
 from air_sdk.endpoints import mixins
+from air_sdk.endpoints.checkpoints import Checkpoint, CheckpointEndpointAPI
 from air_sdk.endpoints.fleets import Fleet, FleetEndpointAPI
 from air_sdk.endpoints.history import History, HistoryEndpointAPI
 from air_sdk.endpoints.images import (
@@ -82,6 +97,7 @@ from air_sdk.endpoints.images import (
     ImageShareEndpointAPI,
 )
 from air_sdk.endpoints.interfaces import Interface, InterfaceEndpointAPI
+from air_sdk.endpoints.links import Link, LinkEndpointAPI
 from air_sdk.endpoints.manifests import Manifest, ManifestEndpointAPI
 from air_sdk.endpoints.marketplace_demo_tags import (
     MarketplaceDemoTag,
@@ -127,6 +143,8 @@ MarketplaceDemoEndpointApi = MarketplaceDemoEndpointAPI  # v2
 InterfaceApi = InterfaceEndpointAPI  # v1
 InterfaceEndpointApi = InterfaceEndpointAPI  # v2
 SimulationInterfaceApi = InterfaceEndpointAPI  # v1
+LinkApi = LinkEndpointAPI  # v1
+LinkEndpointApi = LinkEndpointAPI  # v2
 NodeInstructionsEndpointApi = NodeInstructionEndpointAPI  # V2
 UserConfigAPI = UserConfigEndpointAPI  # v1
 UserConfigEndpointApi = UserConfigEndpointAPI  # v2

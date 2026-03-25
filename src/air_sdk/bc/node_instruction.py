@@ -7,11 +7,10 @@ Instruction-specific backward compatibility for v2 SDK.
 """
 
 import json
-import warnings
 from typing import Any
 
 from air_sdk.bc.base import AirModelCompatMixin
-from air_sdk.bc.utils import drop_removed_fields, map_field_names
+from air_sdk.bc.utils import deprecation_warn, drop_removed_fields, map_field_names
 
 # Executor type constants
 EXECUTOR_SHELL = 'shell'
@@ -48,11 +47,9 @@ def _convert_data_field_to_dict(kwargs: dict[str, Any]) -> None:
 
     # Issue single deprecation warning with dynamic message
     if executor in VALID_EXECUTORS:
-        warnings.warn(
+        deprecation_warn(
             f"Passing 'data' as a string for '{executor}' executor is deprecated. "
-            f'Use a dict instead: {DEPRECATION_MESSAGES[executor]}',
-            DeprecationWarning,
-            stacklevel=3,
+            f'Use a dict instead: {DEPRECATION_MESSAGES[executor]}'
         )
 
     if executor == EXECUTOR_SHELL:
@@ -126,11 +123,9 @@ class NodeInstructionCompatMixin(AirModelCompatMixin):
 
         # handle the case where the user tries to update the data of the instruction
         if 'data' in kwargs:
-            warnings.warn(
+            deprecation_warn(
                 'The data of an instruction cannot be updated in the current '
-                'AIR API version.',
-                DeprecationWarning,
-                stacklevel=3,
+                'AIR API version.'
             )
 
         super().update(*args, **kwargs)  # type: ignore[misc]
@@ -187,11 +182,9 @@ class NodeInstructionEndpointAPICompatMixin:
 
         # handle the case where the user tries to update the data of the instruction
         if 'data' in kwargs:
-            warnings.warn(
+            deprecation_warn(
                 'The data of an instruction cannot be updated in the current '
-                'AIR API version.',
-                DeprecationWarning,
-                stacklevel=3,
+                'AIR API version.'
             )
 
         return super().patch(*args, **kwargs)  # type: ignore[misc]

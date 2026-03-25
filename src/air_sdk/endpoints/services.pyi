@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
@@ -103,8 +103,8 @@ class ServiceEndpointAPI(
         >>> # Get a service
         >>> service = api.services.get('service-id')
         >>>
-        >>> # Delete a service
-        >>> api.services.delete(service)
+        >>> # Delete a service by ID
+        >>> api.services.delete(service.id)
     """
 
     API_PATH: str
@@ -211,15 +211,13 @@ class ServiceEndpointAPI(
     # The Air API does not support PATCH/PUT operations for services
     # To change a service, delete it and create a new one
 
-    def delete(self, *, service: Service | PrimaryKey) -> None:  # type: ignore[override]
+    def delete(self, pk: PrimaryKey) -> None:  # type: ignore[override]
         """Delete a service.
 
         Args:
-            service: Service instance or ID
+            pk: Service ID
 
         Example:
-            >>> api.services.delete(service='service-id')
-            >>> # Or using instance
-            >>> api.services.delete(service=service)
+            >>> api.services.delete('service-id')
         """
         ...

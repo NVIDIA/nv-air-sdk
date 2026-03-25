@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -11,6 +11,7 @@ from datetime import datetime
 from typing import Iterator, List, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
+from air_sdk.endpoints.links import LinkEndpointAPI
 from air_sdk.endpoints.nodes import Node
 from air_sdk.endpoints.services import ServiceEndpointAPI
 
@@ -81,23 +82,16 @@ class Interface(AirModel):
         """
         ...
 
-    def connect(self, *, target: Interface | PrimaryKey) -> Interface:
-        """Connect the interface to another interface.
+    @property
+    def links(self) -> LinkEndpointAPI:
+        """Access the links endpoint for this interface.
 
-        Args:
-            target: Interface or primary key of the interface to connect to
-
-        Example:
-            >>> interface.connect(interface)
-            >>> interface.connect('interface-id')
-        """
-        ...
-    def disconnect(self) -> Interface:
-        """Disconnect the interface from its connection.
+        Returns:
+            LinkEndpointAPI instance filtered for this interface's links
 
         Example:
-            >>> interface.disconnect()
-
+            >>> for link in interface.links.list():
+            ...     print(link.id)
         """
         ...
     def breakout(self, *, split_count: int) -> List[Interface]:
@@ -242,44 +236,6 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
         """
         ...
 
-    def update(
-        self,
-        *,
-        interface: Interface | PrimaryKey,
-        name: str | _MISSING_TYPE = ...,
-        interface_type: Literal['DATA_PLANE_INTF', 'PCIE_INTF', 'OOB_INTF']
-        | _MISSING_TYPE = ...,
-        outbound: bool | _MISSING_TYPE = ...,
-        attributes: InterfaceAttributes | None | _MISSING_TYPE = ...,
-    ) -> Interface:
-        # fmt: off
-        """Update the interface's properties.
-
-        Args:
-            interface: Interface or primary key of the interface to update
-            name: New name for the interface
-            interface_type: New type for the interface
-            outbound: New outbound status for the interface
-            attributes: New attributes for the interface
-
-        Returns:
-            The updated Interface instance
-
-        Example:
-            >>> # Using Interface object
-            >>> updated_interface = api.interfaces.update(
-            ...     interface=interface, name='New Name'
-            ... )
-            >>> # Using interface ID
-            >>> updated_interface = api.interfaces.update(
-            ...     interface='interface-id',
-            ...     name='New Name',
-            ...     interface_type='DATA_PLANE_INTF',
-            ... )
-        """
-        # fmt: on
-        ...
-
     def get(self, pk: PrimaryKey) -> Interface:
         """Get a specific interface by ID.
 
@@ -305,41 +261,6 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
         """
         ...
 
-    def connect(
-        self,
-        *,
-        interface: Interface | PrimaryKey,
-        target: Interface | PrimaryKey,
-    ) -> Interface:
-        """Connect the interface to another interface.
-
-        Args:
-            interface: Interface or primary key of the interface to connect
-            target: Interface or primary key of the interface to connect to
-
-        Returns:
-            The source interface instance
-
-        Example:
-            >>> api.interfaces.connect(interface=interface, target=target)
-            >>> api.interfaces.connect(interface='interface-id', target='target-id')
-        """
-        ...
-
-    def disconnect(self, *, interface: Interface | PrimaryKey) -> Interface:
-        """Disconnect the interface from its connection.
-
-        Args:
-            interface: Interface or primary key of the interface to disconnect
-
-        Returns:
-            The source interface instance
-
-        Example:
-            >>> api.interfaces.disconnect(interface=interface)
-            >>> api.interfaces.disconnect(interface='interface-id')
-        """
-        ...
     def breakout(
         self, *, interface: Interface | PrimaryKey, split_count: int
     ) -> List[Interface]:
