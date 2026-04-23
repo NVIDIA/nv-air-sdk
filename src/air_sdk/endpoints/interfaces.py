@@ -28,7 +28,7 @@ from air_sdk.utils import raise_if_invalid_response, validate_payload_types
 
 
 @dataclass
-class InterfaceAttributes:
+class InterfaceLabels:
     interface_role: str | None
     scalable_unit: int | None
 
@@ -44,7 +44,9 @@ class Interface(BaseCompatMixin, InterfaceCompatMixin, AirModel):
     mac_address: str
     connection: Interface | None = field(metadata=AirModel.FIELD_FOREIGN_KEY, repr=False)
     outbound: bool
-    attributes: InterfaceAttributes | None = field(repr=False)
+    labels: InterfaceLabels | None = field(repr=False)
+    interface_role: str | None = field(default=None, repr=False)
+    scalable_unit: int | None = field(default=None, repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[InterfaceEndpointAPI]:

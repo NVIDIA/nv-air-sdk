@@ -46,7 +46,7 @@ class Node(BaseCompatMixin, NodeCompatMixin, AirModel):
     pos_y: int = field(repr=False)
     cdrom: dict[str, Any] | None = field(repr=False)
     storage_pci: dict[str, Any] | None = field(repr=False)
-    attributes: dict[str, Any] | None = field(repr=False)
+    labels: dict[str, Any] | None = field(repr=False)
     metadata: str | None = field(repr=False)
     advanced: dict[str, Any] = field(repr=False)
     management_ip: str | None = field(default=None, repr=False)

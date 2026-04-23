@@ -52,7 +52,7 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
     state: str
     creator: str
     auto_oob_enabled: bool | None = field(repr=False)
-    disable_auto_oob_dhcp: bool | None = field(repr=False)
+    enable_dhcp: bool | None = field(repr=False)
     auto_netq_enabled: bool | None = field(repr=False)
     netq_username: str | None = field(default=None, repr=False)
     netq_password: str | None = field(default=None, repr=False)
@@ -74,9 +74,6 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
 
     def update(self, **kwargs: Any) -> None:
         self.model_api.update(simulation=self, **kwargs)
-
-    def enable_auto_oob(self, **kwargs: Any) -> None:
-        self.model_api.enable_auto_oob(simulation=self, **kwargs)
 
     def disable_auto_oob(self, **kwargs: Any) -> None:
         self.model_api.disable_auto_oob(simulation=self, **kwargs)

@@ -21,8 +21,8 @@ from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
 
-class NodeAttributes(TypedDict, total=False):
-    """Node attributes for topology organization."""
+class NodeLabels(TypedDict, total=False):
+    """Node labels for topology organization."""
 
     group: str | None
     model: str | None
@@ -89,7 +89,7 @@ class Node(AirModel):
         storage: Storage of the node
         pos_x: X position of the node
         pos_y: Y position of the node
-        attributes: Attributes of the node
+        labels: Labels of the node
         metadata: Custom metadata for the node (JSON string)
         advanced: Advanced attributes of the node
         cdrom: CDROM attributes of the node
@@ -114,7 +114,7 @@ class Node(AirModel):
     storage: int
     pos_x: int
     pos_y: int
-    attributes: NodeAttributes
+    labels: NodeLabels | None
     metadata: str | None
     advanced: NodeAdvanced
     cdrom: NodeCDROM | None
@@ -136,7 +136,7 @@ class Node(AirModel):
         storage: int = ...,
         pos_x: int = ...,
         pos_y: int = ...,
-        attributes: dict[str, Any] = ...,
+        labels: dict[str, Any] = ...,
         metadata: str | None = ...,
         advanced: dict[str, Any] = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
@@ -153,7 +153,7 @@ class Node(AirModel):
             pos_x: X position of the node
             pos_y: Y position of the node
             management_mac: MAC address of the management interface
-            attributes: Attributes of the node
+            labels: Labels of the node
             metadata: Custom metadata for the node (JSON string)
             advanced: Advanced attributes of the node
             storage_pci: Storage PCI of the node
@@ -167,7 +167,7 @@ class Node(AirModel):
             ...     storage=10,
             ...     pos_x=0,
             ...     pos_y=0,
-            ...     attributes={'key': 'value'},
+            ...     labels={'key': 'value'},
             ...     advanced={'key': 'value'},
             ...     storage_pci={'key': 'value'},
             ... )
@@ -347,7 +347,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         storage: int = ...,
         pos_x: int = ...,
         pos_y: int = ...,
-        attributes: NodeAttributes = ...,
+        labels: NodeLabels = ...,
         advanced: NodeAdvanced = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
@@ -363,7 +363,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             storage: (optional) Storage of the node
             pos_x: (optional) X position of the node
             pos_y: (optional) Y position of the node
-            attributes: (optional) Attributes of the node
+            labels: (optional) Labels of the node
             advanced: (optional) Advanced attributes of the node
             storage_pci: (optional) Storage PCI of the node
             management_mac: (optional) MAC address of the management interface
@@ -449,7 +449,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         storage: int = ...,
         pos_x: int = ...,
         pos_y: int = ...,
-        attributes: NodeAttributes = ...,
+        labels: NodeLabels = ...,
         advanced: NodeAdvanced = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
@@ -465,7 +465,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             storage: Storage of the node
             pos_x: X position of the node
             pos_y: Y position of the node
-            attributes: Attributes of the node
+            labels: Labels of the node
             advanced: Advanced attributes of the node
             storage_pci: Storage PCI of the node
             management_mac: MAC address of the management interface
@@ -490,7 +490,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         storage: int = ...,
         pos_x: int = ...,
         pos_y: int = ...,
-        attributes: NodeAttributes = ...,
+        labels: NodeLabels = ...,
         metadata: str | None = ...,
         advanced: NodeAdvanced = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
@@ -507,7 +507,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             storage: Storage of the node
             pos_x: X position of the node
             pos_y: Y position of the node
-            attributes: Attributes of the node
+            labels: Labels of the node
             advanced: Advanced attributes of the node
             storage_pci: Storage PCI of the node
             metadata: Custom metadata for the node (JSON string)
@@ -532,7 +532,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         storage: int = ...,
         pos_x: int = ...,
         pos_y: int = ...,
-        attributes: NodeAttributes = ...,
+        labels: NodeLabels = ...,
         metadata: str | None = ...,
         advanced: NodeAdvanced = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
@@ -552,7 +552,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             storage: Optional storage in GB (overrides template)
             pos_x: Optional X position on canvas
             pos_y: Optional Y position on canvas
-            attributes: Optional node attributes
+            labels: Optional node labels
             metadata: Optional custom metadata for the node (JSON string)
             advanced: Optional advanced configuration
             storage_pci: Optional storage PCI configuration

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2022-2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2022-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -32,7 +32,7 @@ class System(BaseCompatMixin, AirModel):
     storage: int = field(repr=False)
     cpu: int = field(repr=False)
     category: str = field(repr=False)
-    attributes: dict[str, Any] = field(repr=False)
+    labels: dict[str, Any] | None = field(repr=False)
     split_options: list[int] | None = field(repr=False)
 
     @classmethod

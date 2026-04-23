@@ -25,6 +25,8 @@ class Organization(AirModel):
         modified: Timestamp when the resource budget was last modified
         org_display_name: Display name of the organization
         org_nca_id: NCA ID of the organization
+        org_id: ID of the organization in Air's database
+        ngc_org_name: NGC organization name (e.g. '0892929384')
         cpu: Number of CPU cores allocated
         memory: Memory allocated, in MiB
         disk_storage_total: Total disk storage allocated, in GB
@@ -39,6 +41,8 @@ class Organization(AirModel):
     modified: datetime
     org_display_name: str
     org_nca_id: str
+    org_id: str
+    ngc_org_name: str
     cpu: int | float
     memory: int | float
     disk_storage_total: int | float
@@ -77,6 +81,8 @@ class OrganizationEndpointAPI(BaseEndpointAPI[Organization]):
         ordering: str = ...,
         org_display_name: str = ...,
         org_nca_id: str = ...,
+        org_id: str = ...,
+        ngc_org_name: str = ...,
         search: str = ...,
     ) -> Iterator[Organization]:
         """List all organizations / resource budgets with optional filtering.
@@ -87,6 +93,8 @@ class OrganizationEndpointAPI(BaseEndpointAPI[Organization]):
             ordering: Order by field. Prefix with "-" for descending order
             org_display_name: Filter by the display name of the organization
             org_nca_id: Filter by the NCA ID of the organization
+            org_id: Filter by the ID of the organization in Air's database
+            ngc_org_name: Filter by the NGC organization name
             search: Search resource budgets by org_display_name
 
         Returns:

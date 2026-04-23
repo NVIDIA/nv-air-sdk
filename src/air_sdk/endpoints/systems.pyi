@@ -30,7 +30,7 @@ class System(AirModel):
     storage: int
     cpu: int
     category: str
-    attributes: dict[str, Any]
+    labels: dict[str, Any] | None
     split_options: list[int] | None
 
     @classmethod
@@ -51,9 +51,9 @@ class SystemEndpointAPI(BaseEndpointAPI[System]):
         offset: int = ...,
         ordering: str = ...,
         search: str = ...,
-        attributes__group: str = ...,
-        attributes__model: str = ...,
-        attributes__sku: str = ...,
+        labels__group: str = ...,
+        labels__model: str = ...,
+        labels__sku: str = ...,
         category: str = ...,
         id: str = ...,
         image: Image | PrimaryKey = ...,
@@ -67,9 +67,9 @@ class SystemEndpointAPI(BaseEndpointAPI[System]):
             offset: The initial index from which to return the results
             ordering: Order objects by field. Prefix with "-" for desc order
             search: Search by name
-            attributes__group: Filter by group
-            attributes__model: Filter by model
-            attributes__sku: Filter by sku
+            labels__group: Filter by group
+            labels__model: Filter by model
+            labels__sku: Filter by sku
             category: Filter by category
             id: Filter by ID
             image: Filter by image

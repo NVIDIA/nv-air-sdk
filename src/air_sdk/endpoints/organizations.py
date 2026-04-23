@@ -21,6 +21,8 @@ class Organization(OrganizationCompatMixin, AirModel):
     modified: datetime = field(repr=False)
     org_display_name: str
     org_nca_id: str = field(repr=False)
+    org_id: str = field(repr=False)
+    ngc_org_name: str = field(repr=False)
     cpu: int | float = field(repr=False)
     memory: int | float = field(repr=False)
     disk_storage_total: int | float = field(repr=False)

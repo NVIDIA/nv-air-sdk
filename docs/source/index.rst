@@ -1,8 +1,8 @@
-NVIDIA Air SDK
-==============
+NVIDIA DSX Air SDK
+==================
 
 A Python SDK for creating, running, and managing network simulations on
-`NVIDIA Air <https://air-ngc.nvidia.com>`_.
+`NVIDIA DSX Air <https://air-ngc.nvidia.com>`_.
 
 Installation
 ------------
@@ -25,7 +25,7 @@ Authentication
 --------------
 
 The SDK supports three authentication methods. See the
-`NVIDIA Air authentication guide <https://docs.nvidia.com/networking-ethernet-software/nvidia-air-v2/Authentication/>`_
+`NVIDIA DSX Air authentication guide <https://docs.nvidia.com/networking-ethernet-software/nvidia-air-v2/Authentication/>`_
 for details on obtaining credentials.
 
 **API Key** — pass an NGC Scoped API Key (SAK) directly:
@@ -59,7 +59,7 @@ Non-Standard Hostnames
 ^^^^^^^^^^^^^^^^^^^^^^
 
 All factory methods accept an ``api_url`` parameter that defaults to the
-public NVIDIA Air instance. If you are connecting to a different Air
+public NVIDIA DSX Air instance. If you are connecting to a different Air
 deployment, browse to ``/api`` on the host
 (e.g. ``https://your-air-host.example.com/api``) and pass the API URL
 from the servers dropdown to the SDK:

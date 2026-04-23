@@ -37,7 +37,7 @@ class Simulation(AirModel):
         state: Current state of the simulation (see Literal values for all states)
         creator: Email of the user who created the simulation
         auto_oob_enabled: Whether automatic out-of-band management is enabled
-        disable_auto_oob_dhcp: Whether DHCP should be disabled on the OOB server
+        enable_dhcp: Whether DHCP is enabled on the OOB server (when OOB is enabled)
         auto_netq_enabled: Whether automatic NetQ is enabled
         sleep_at: When the simulation should be automatically put to sleep (stored)
         expires_at: When the simulation should be automatically deleted
@@ -74,7 +74,7 @@ class Simulation(AirModel):
     ]
     creator: str
     auto_oob_enabled: bool | None
-    disable_auto_oob_dhcp: bool | None
+    enable_dhcp: bool | None
     auto_netq_enabled: bool | None
     sleep_at: datetime | None
     expires_at: datetime | None
@@ -114,19 +114,21 @@ class Simulation(AirModel):
         """
         ...
 
-    def enable_auto_oob(self, disable_auto_oob_dhcp: bool = ...) -> None:
+    def enable_auto_oob(self, enable_dhcp: bool = ...) -> None:
         """Enable automatic Out-of-band management for this simulation.
 
         Args:
-            disable_auto_oob_dhcp: If True, disable DHCP on the OOB management network
+            enable_dhcp: If True, enable DHCP on the OOB management network
+                        (default behavior). If False, disable DHCP on the
+                        OOB network.
 
 
         Example:
-            # Enable OOB  with DHCP:
+            # Enable OOB with DHCP (default):
             >>> simulation.enable_auto_oob()
 
             # Enable OOB without DHCP:
-            >>> simulation.enable_auto_oob(disable_auto_oob_dhcp=True)
+            >>> simulation.enable_auto_oob(enable_dhcp=False)
         """
         ...
 
@@ -913,7 +915,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         *,
         auto_netq_enabled: bool = ...,
         auto_oob_enabled: bool = ...,
-        disable_auto_oob_dhcp: bool = ...,
+        enable_dhcp: bool = ...,
         id: str = ...,
         limit: int = ...,
         name: str = ...,
@@ -927,7 +929,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
                 Args:
                     auto_netq_enabled: Filter by auto NetQ enabled status
                     auto_oob_enabled: Filter by auto OOB enabled status
-                    disable_auto_oob_dhcp: Filter by disable auto OOB DHCP status
+                    enable_dhcp: Filter by DHCP enabled status on OOB network
                     id: Filter by simulation ID
                     limit: Number of results to return per page
                     name: Filter by simulation name
@@ -1087,14 +1089,15 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         ...
     # fmt: on
     def enable_auto_oob(
-        self, *, simulation: Simulation | PrimaryKey, disable_auto_oob_dhcp: bool = ...
+        self, *, simulation: Simulation | PrimaryKey, enable_dhcp: bool = ...
     ) -> None:
         # fmt: off
         """Enable automatic Out-of-band management for a simulation.
         
         Args:
             simulation: The simulation object or simulation ID
-            disable_auto_oob_dhcp: If True, disable DHCP on the OOB management network
+            enable_dhcp: If True, enable DHCP on the OOB management network.
+                        If False, disable DHCP on the OOB network.
 
             
         Example:
@@ -1106,7 +1109,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
 
             # Enable OOB without DHCP:
             >>> api.simulations.enable_auto_oob(
-            ...     simulation=simulation, disable_auto_oob_dhcp=True
+            ...     simulation=simulation, enable_dhcp=False
             ... )
         """
         # fmt: on

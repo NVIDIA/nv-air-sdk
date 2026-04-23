@@ -117,6 +117,7 @@ class NodeCompatMixin(AirModelCompatMixin):
         'features': 'advanced',
         'original': 'id',
         'simulation_id': 'simulation',
+        'attributes': 'labels',  # v2 used attributes; v3 uses labels
     }
 
     # Fields that were removed in v3

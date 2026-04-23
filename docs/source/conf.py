@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 
-"""Sphinx configuration for NVIDIA Air SDK documentation."""
+"""Sphinx configuration for NVIDIA DSX Air SDK documentation."""
 
 import sys
 from pathlib import Path
@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 import air_sdk
 
 # -- Project information -----------------------------------------------------
-project = 'NVIDIA Air SDK'
+project = 'NVIDIA DSX Air SDK'
 copyright = '2026, NVIDIA CORPORATION & AFFILIATES'
 author = 'Air Team'
 version = release = air_sdk.__version__

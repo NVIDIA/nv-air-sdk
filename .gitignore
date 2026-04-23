@@ -17,3 +17,5 @@ coverage.xml
 .ruff_cache
 .mypy_cache
 .coverage
+# Sphinx documentation build
+docs/_build/

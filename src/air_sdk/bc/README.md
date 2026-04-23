@@ -129,7 +129,9 @@ The BC layer automatically handles field name changes between versions:
 ### New v3 Fields
 - **`checkpoint`** in `start()` - Optional checkpoint ID to start from (v3 new field)
 - **`create_checkpoint`** in `shutdown()` - Create checkpoint before shutdown (v3 new field)
-- **`disable_auto_oob_dhcp`** in `enable_auto_oob()` - Disable DHCP on OOB network (v3 new field)
+- **`enable_dhcp`** in `enable_auto_oob()` - Enable/disable DHCP on OOB network (v3 new field)
+  - BC: v2 `disable_auto_oob_dhcp` maps to `enable_dhcp` with inverted semantics
+  - BC: `simulation.disable_auto_oob_dhcp` property provides read access (inverted from `enable_dhcp`)
 
 ## Methods NOT Migrated to v3
 

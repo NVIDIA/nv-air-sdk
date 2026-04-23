@@ -94,27 +94,46 @@ class SimulationState(str):
         return str.__hash__(self)
 
 
+def _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs: dict[str, Any]) -> None:
+    """Map v2 disable_auto_oob_dhcp to v3 enable_dhcp (inverted boolean).
+
+    Modifies kwargs in-place. Only maps if enable_dhcp is not already set.
+    """
+    if 'disable_auto_oob_dhcp' in kwargs:
+        disable_value = kwargs.pop('disable_auto_oob_dhcp')
+        if disable_value is not None and 'enable_dhcp' not in kwargs:
+            kwargs['enable_dhcp'] = not disable_value
+        if disable_value is not None:
+            deprecation_warn(
+                "The parameter 'disable_auto_oob_dhcp' has been renamed to "
+                "'enable_dhcp' (with inverted semantics) in the current air-api "
+                'version. Please update your code to use enable_dhcp instead.',
+            )
+
+
 def _extract_oob_netq_fields(
     kwargs: dict[str, Any],
 ) -> tuple[bool | None, bool | None, bool | None]:
     """Extract OOB/NetQ fields from kwargs for routing to dedicated endpoints.
 
-    Extracts and removes auto_oob_enabled, disable_auto_oob_dhcp, and
+    Extracts and removes auto_oob_enabled, enable_dhcp, and
     auto_netq_enabled from kwargs (modified in-place).
 
     Args:
         kwargs: Dictionary to extract OOB/NetQ fields from (modified in-place)
 
     Returns:
-        Tuple of (auto_oob_enabled, disable_auto_oob_dhcp, auto_netq_enabled)
+        Tuple of (auto_oob_enabled, enable_dhcp, auto_netq_enabled)
         Each value is None if not present in kwargs.
     """
+    _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs)
+
     auto_oob_enabled = kwargs.pop('auto_oob_enabled', None)
-    # disable_auto_oob_dhcp only applies when enabling OOB
-    disable_auto_oob_dhcp = kwargs.pop('disable_auto_oob_dhcp', None)
+    # enable_dhcp only applies when enabling OOB
+    enable_dhcp = kwargs.pop('enable_dhcp', None)
     auto_netq_enabled = kwargs.pop('auto_netq_enabled', None)
 
-    return auto_oob_enabled, disable_auto_oob_dhcp, auto_netq_enabled
+    return auto_oob_enabled, enable_dhcp, auto_netq_enabled
 
 
 class SimulationCompatMixin(AirModelCompatMixin):
@@ -154,6 +173,12 @@ class SimulationCompatMixin(AirModelCompatMixin):
         if state is not None and not isinstance(state, SimulationState):
             object.__setattr__(self, 'state', SimulationState(state))
 
+    @property
+    def disable_auto_oob_dhcp(self) -> bool | None:
+        """BC property: disable_auto_oob_dhcp → enable_dhcp (inverted)."""
+        dhcp = getattr(self, 'enable_dhcp', None)
+        return None if dhcp is None else not dhcp
+
     def __getattr__(self, name: str) -> Any:
         """Handle simulation-specific computed fields and delegate mapping to base.
 
@@ -171,6 +196,11 @@ class SimulationCompatMixin(AirModelCompatMixin):
 
         return super().__getattr__(name)
 
+    def enable_auto_oob(self, **kwargs: Any) -> None:
+        """Enable auto OOB with v1/v2 BC for disable_auto_oob_dhcp parameter."""
+        _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs)
+        self.model_api.enable_auto_oob(simulation=self, **kwargs)
+
     def update(self, *args: Any, **kwargs: Any) -> None:
         """Update method with field name compatibility for Simulations.
 
@@ -182,7 +212,7 @@ class SimulationCompatMixin(AirModelCompatMixin):
         - Fields in _REMOVED_FIELDS
 
         Routes OOB/NetQ fields to dedicated endpoints:
-        - auto_oob_enabled, disable_auto_oob_dhcp → enable/disable_auto_oob()
+        - auto_oob_enabled, enable_dhcp → enable/disable_auto_oob()
         - auto_netq_enabled → enable/disable_auto_netq()
 
         Note:
@@ -198,11 +228,9 @@ class SimulationCompatMixin(AirModelCompatMixin):
         # 1. Disable NetQ (if needed)
         # 2. Enable/disable OOB
         # 3. Enable NetQ (if needed)
-        (
-            auto_oob_enabled,
-            disable_auto_oob_dhcp,
-            auto_netq_enabled,
-        ) = _extract_oob_netq_fields(kwargs)
+        auto_oob_enabled, enable_dhcp, auto_netq_enabled = _extract_oob_netq_fields(
+            kwargs
+        )
 
         # Step 1: Disable NetQ first (if disabling) since NetQ requires OOB
         if auto_netq_enabled is False:
@@ -212,8 +240,8 @@ class SimulationCompatMixin(AirModelCompatMixin):
         if auto_oob_enabled is not None:
             if auto_oob_enabled:
                 enable_kwargs = {}
-                if disable_auto_oob_dhcp is not None:
-                    enable_kwargs['disable_auto_oob_dhcp'] = disable_auto_oob_dhcp
+                if enable_dhcp is not None:
+                    enable_kwargs['enable_dhcp'] = enable_dhcp
                 self.enable_auto_oob(**enable_kwargs)
             else:
                 self.disable_auto_oob()
@@ -478,11 +506,9 @@ class SimulationEndpointAPICompatMixin:
         # 1. Disable NetQ (if needed)
         # 2. Enable/disable OOB
         # 3. Enable NetQ (if needed)
-        (
-            auto_oob_enabled,
-            disable_auto_oob_dhcp,
-            auto_netq_enabled,
-        ) = _extract_oob_netq_fields(kwargs)
+        auto_oob_enabled, enable_dhcp, auto_netq_enabled = _extract_oob_netq_fields(
+            kwargs
+        )
 
         # Step 1: Disable NetQ first (if disabling) since NetQ requires OOB
         if auto_netq_enabled is False:
@@ -492,9 +518,9 @@ class SimulationEndpointAPICompatMixin:
         if auto_oob_enabled is not None:
             if auto_oob_enabled:
                 enable_kwargs = {}
-                if disable_auto_oob_dhcp is not None:
-                    enable_kwargs['disable_auto_oob_dhcp'] = disable_auto_oob_dhcp
-                self.enable_auto_oob(simulation=pk, **enable_kwargs)  # type: ignore[attr-defined]
+                if enable_dhcp is not None:
+                    enable_kwargs['enable_dhcp'] = enable_dhcp
+                self.enable_auto_oob(simulation=pk, **enable_kwargs)
             else:
                 self.disable_auto_oob(simulation=pk)  # type: ignore[attr-defined]
 
@@ -515,11 +541,18 @@ class SimulationEndpointAPICompatMixin:
         Handles:
         - Field name mapping (see SimulationCompatMixin._FIELD_MAPPINGS)
         - Removed filters (see SimulationCompatMixin._REMOVED_FIELDS)
+        - disable_auto_oob_dhcp → enable_dhcp (inverted) for list filters
         """
+        _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs)
         # Drop removed fields (includes both body fields and filters)
         drop_removed_fields(kwargs, SimulationCompatMixin._REMOVED_FIELDS)
         map_field_names(kwargs, SimulationCompatMixin._FIELD_MAPPINGS)
         return super().list(*args, **kwargs)  # type: ignore[misc]
+
+    def enable_auto_oob(self, *, simulation: PrimaryKey, **kwargs: Any) -> None:
+        """Enable auto OOB with v1/v2 BC for disable_auto_oob_dhcp parameter."""
+        _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs)
+        super().enable_auto_oob(simulation=simulation, **kwargs)  # type: ignore[misc]
 
     def create_from(self, *args: Any, **kwargs: Any) -> Any:
         """Create simulation from topology data (v2 BC).

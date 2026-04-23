@@ -16,7 +16,7 @@ from air_sdk.endpoints.nodes import Node
 from air_sdk.endpoints.services import ServiceEndpointAPI
 
 @dataclass
-class InterfaceAttributes:
+class InterfaceLabels:
     interface_role: str | None
     scalable_unit: int | None
 
@@ -34,7 +34,9 @@ class Interface(AirModel):
         mac_address: MAC address of the interface
         connection: Interface that the interface is connected to
         outbound: Whether the interface is outbound
-        attributes: Attributes of the interface
+        labels: Labels of the interface
+        interface_role: The role of the interface
+        scalable_unit: The scalable unit number of the interface
     """
 
     id: str
@@ -46,7 +48,9 @@ class Interface(AirModel):
     mac_address: str
     connection: Interface | None
     outbound: bool
-    attributes: InterfaceAttributes | None
+    labels: InterfaceLabels | None
+    interface_role: str | None
+    scalable_unit: int | None
 
     @classmethod
     def get_model_api(cls) -> type[InterfaceEndpointAPI]: ...
@@ -59,7 +63,9 @@ class Interface(AirModel):
         interface_type: Literal['DATA_PLANE_INTF', 'PCIE_INTF', 'OOB_INTF']
         | _MISSING_TYPE = ...,
         outbound: bool | _MISSING_TYPE = ...,
-        attributes: InterfaceAttributes | None | _MISSING_TYPE = ...,
+        labels: InterfaceLabels | None | _MISSING_TYPE = ...,
+        interface_role: str | None | _MISSING_TYPE = ...,
+        scalable_unit: int | None | _MISSING_TYPE = ...,
     ) -> None:
         """Update the interface's properties.
 
@@ -67,7 +73,9 @@ class Interface(AirModel):
             name: New name for the interface
             interface_type: New type for the interface
             outbound: New outbound status for the interface
-            attributes: New attributes for the interface
+            labels: New labels for the interface
+            interface_role: New role for the interface
+            scalable_unit: New scalable unit for the interface
 
         Example:
             >>> interface.update(name='New Name')
@@ -167,13 +175,21 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
         | _MISSING_TYPE = ...,
         mac_address: str | _MISSING_TYPE = ...,
         outbound: bool | _MISSING_TYPE = ...,
-        attributes: InterfaceAttributes | None | _MISSING_TYPE = ...,
+        labels: InterfaceLabels | None | _MISSING_TYPE = ...,
+        interface_role: str | None | _MISSING_TYPE = ...,
+        scalable_unit: int | None | _MISSING_TYPE = ...,
     ) -> Interface:
         """Create a new interface.
 
         Args:
             name: Name of the interface
             node: Node to create the interface on
+            interface_type: Type of the interface
+            mac_address: MAC address of the interface
+            outbound: Outbound status of the interface
+            labels: Labels for the interface
+            interface_role: Role of the interface
+            scalable_unit: Scalable unit of the interface
 
         Returns:
             The created Interface instance

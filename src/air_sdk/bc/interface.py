@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -8,13 +8,14 @@ Interface-specific backward compatibility for v1/v2 SDK.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 from air_sdk.bc.base import AirModelCompatMixin
 from air_sdk.bc.utils import drop_removed_fields
 
 if TYPE_CHECKING:
     from air_sdk.endpoints.interfaces import Interface
+    from air_sdk.endpoints.mixins import IndexableIterator
 
 
 class InterfaceCompatMixin(AirModelCompatMixin):
@@ -87,7 +88,7 @@ class InterfaceEndpointAPICompatMixin:
         drop_removed_fields(kwargs, InterfaceCompatMixin._REMOVED_FIELDS)
         return super().create(*args, **kwargs)  # type: ignore[no-any-return, misc]
 
-    def list(self, *args: Any, **kwargs: Any) -> Iterator[Interface]:
+    def list(self, **params: Any) -> IndexableIterator[Interface]:
         """List interfaces with v1/v2 filter name compatibility.
 
         Handles:
@@ -96,6 +97,6 @@ class InterfaceEndpointAPICompatMixin:
         """
         # Drop removed fields except 'simulation' (used as filter in v3)
         drop_removed_fields(
-            kwargs, InterfaceCompatMixin._REMOVED_FIELDS, exclude_fields=['simulation']
+            params, InterfaceCompatMixin._REMOVED_FIELDS, exclude_fields=['simulation']
         )
-        return super().list(*args, **kwargs)  # type: ignore[no-any-return, misc]
+        return super().list(**params)  # type: ignore[no-any-return, misc]
