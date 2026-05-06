@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.3.1] - 2026-05-06
+- Redacted a real looking registration token after it was flagged by GitHub.
+
 # [1.3.0] - 2026-04-23
 - Updated the SDK models and parsing to match the current API contract.
 - Rebranded SDK docs to DSX Air.
