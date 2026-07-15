@@ -53,9 +53,6 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
     creator: str
     auto_oob_enabled: bool | None = field(repr=False)
     enable_dhcp: bool | None = field(repr=False)
-    auto_netq_enabled: bool | None = field(repr=False)
-    netq_username: str | None = field(default=None, repr=False)
-    netq_password: str | None = field(default=None, repr=False)
     sleep_at: datetime | None = field(default=None, repr=False)
     expires_at: datetime | None = field(default=None, repr=False)
     documentation: str | None = field(default=None, repr=False)
@@ -77,12 +74,6 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
 
     def disable_auto_oob(self, **kwargs: Any) -> None:
         self.model_api.disable_auto_oob(simulation=self, **kwargs)
-
-    def enable_auto_netq(self, **kwargs: Any) -> None:
-        self.model_api.enable_auto_netq(simulation=self, **kwargs)
-
-    def disable_auto_netq(self, **kwargs: Any) -> None:
-        self.model_api.disable_auto_netq(simulation=self, **kwargs)
 
     @validate_payload_types
     def create_ztp_script(self, *, content: str, **kwargs: Any) -> ZTPScript:
@@ -505,26 +496,6 @@ class SimulationEndpointAPI(
         self, *, simulation: Simulation | PrimaryKey, **kwargs: Any
     ) -> None:
         url = mixins.build_resource_url(self.url, simulation, 'disable-auto-oob')
-        response = self.__api__.client.patch(url, data=mixins.serialize_payload(kwargs))
-        raise_if_invalid_response(response, data_type=None)
-        if isinstance(simulation, Simulation):
-            simulation.refresh()
-
-    @validate_payload_types
-    def enable_auto_netq(
-        self, *, simulation: Simulation | PrimaryKey, **kwargs: Any
-    ) -> None:
-        url = mixins.build_resource_url(self.url, simulation, 'enable-auto-netq')
-        response = self.__api__.client.patch(url, data=mixins.serialize_payload(kwargs))
-        raise_if_invalid_response(response, data_type=None)
-        if isinstance(simulation, Simulation):
-            simulation.refresh()
-
-    @validate_payload_types
-    def disable_auto_netq(
-        self, *, simulation: Simulation | PrimaryKey, **kwargs: Any
-    ) -> None:
-        url = mixins.build_resource_url(self.url, simulation, 'disable-auto-netq')
         response = self.__api__.client.patch(url, data=mixins.serialize_payload(kwargs))
         raise_if_invalid_response(response, data_type=None)
         if isinstance(simulation, Simulation):

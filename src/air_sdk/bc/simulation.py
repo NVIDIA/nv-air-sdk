@@ -111,29 +111,28 @@ def _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs: dict[str, Any]) -> None:
             )
 
 
-def _extract_oob_netq_fields(
+def _extract_oob_fields(
     kwargs: dict[str, Any],
-) -> tuple[bool | None, bool | None, bool | None]:
-    """Extract OOB/NetQ fields from kwargs for routing to dedicated endpoints.
+) -> tuple[bool | None, bool | None]:
+    """Extract OOB fields from kwargs for routing to dedicated endpoints.
 
-    Extracts and removes auto_oob_enabled, enable_dhcp, and
-    auto_netq_enabled from kwargs (modified in-place).
+    Extracts and removes auto_oob_enabled and enable_dhcp from kwargs
+    (modified in-place).
 
     Args:
-        kwargs: Dictionary to extract OOB/NetQ fields from (modified in-place)
+        kwargs: Dictionary to extract OOB fields from (modified in-place)
 
     Returns:
-        Tuple of (auto_oob_enabled, enable_dhcp, auto_netq_enabled)
-        Each value is None if not present in kwargs.
+        Tuple of (auto_oob_enabled, enable_dhcp). Each value is None if not
+        present in kwargs.
     """
     _map_disable_auto_oob_dhcp_to_enable_dhcp(kwargs)
 
     auto_oob_enabled = kwargs.pop('auto_oob_enabled', None)
     # enable_dhcp only applies when enabling OOB
     enable_dhcp = kwargs.pop('enable_dhcp', None)
-    auto_netq_enabled = kwargs.pop('auto_netq_enabled', None)
 
-    return auto_oob_enabled, enable_dhcp, auto_netq_enabled
+    return auto_oob_enabled, enable_dhcp
 
 
 class SimulationCompatMixin(AirModelCompatMixin):
@@ -150,7 +149,6 @@ class SimulationCompatMixin(AirModelCompatMixin):
         'title': 'name',
         'owner': 'creator',
         'oob_auto_enabled': 'auto_oob_enabled',
-        'netq_auto_enabled': 'auto_netq_enabled',
         'start': 'attempt_start',
     }
 
@@ -161,7 +159,16 @@ class SimulationCompatMixin(AirModelCompatMixin):
     }
 
     # Fields and filters that were removed in v3
-    _REMOVED_FIELDS = ['organization', 'preferred_worker', 'write_ok']
+    _REMOVED_FIELDS = [
+        'organization',
+        'preferred_worker',
+        'write_ok',
+        # NetQ SaaS removal (1.5.0)
+        'auto_netq_enabled',
+        'netq_auto_enabled',  # the v1/v2 name (formerly mapped to auto_netq_enabled)
+        'netq_username',
+        'netq_password',
+    ]
 
     def __post_init__(self, _api: Any) -> None:
         """Convert state field to SimulationState for BC comparisons."""
@@ -211,9 +218,8 @@ class SimulationCompatMixin(AirModelCompatMixin):
         - expires, sleep (boolean) → use expires_at, sleep_at (datetime)
         - Fields in _REMOVED_FIELDS
 
-        Routes OOB/NetQ fields to dedicated endpoints:
+        Routes OOB fields to dedicated endpoints:
         - auto_oob_enabled, enable_dhcp → enable/disable_auto_oob()
-        - auto_netq_enabled → enable/disable_auto_netq()
 
         Note:
             This method overrides the parent update() to provide field mapping.
@@ -223,20 +229,10 @@ class SimulationCompatMixin(AirModelCompatMixin):
         drop_removed_fields(kwargs, self._REMOVED_FIELDS)
         map_field_names(kwargs, self._FIELD_MAPPINGS)
 
-        # Extract and route OOB/NetQ fields to dedicated endpoints
-        # Note: NetQ depends on OOB, so we handle in this order:
-        # 1. Disable NetQ (if needed)
-        # 2. Enable/disable OOB
-        # 3. Enable NetQ (if needed)
-        auto_oob_enabled, enable_dhcp, auto_netq_enabled = _extract_oob_netq_fields(
-            kwargs
-        )
+        # Extract and route OOB fields to dedicated endpoints
+        auto_oob_enabled, enable_dhcp = _extract_oob_fields(kwargs)
 
-        # Step 1: Disable NetQ first (if disabling) since NetQ requires OOB
-        if auto_netq_enabled is False:
-            self.disable_auto_netq()
-
-        # Step 2: Handle OOB enable/disable
+        # Handle OOB enable/disable
         if auto_oob_enabled is not None:
             if auto_oob_enabled:
                 enable_kwargs = {}
@@ -245,10 +241,6 @@ class SimulationCompatMixin(AirModelCompatMixin):
                 self.enable_auto_oob(**enable_kwargs)
             else:
                 self.disable_auto_oob()
-
-        # Step 3: Enable NetQ last (if enabling) since it requires OOB to be enabled
-        if auto_netq_enabled is True:
-            self.enable_auto_netq()
 
         # Call the parent update() method for remaining fields
         if kwargs:  # Only call if there are remaining fields
@@ -493,7 +485,7 @@ class SimulationEndpointAPICompatMixin:
         - Boolean datetime fields (sleep, expires) → datetime fields
         - Field name mapping (see SimulationCompatMixin._FIELD_MAPPINGS)
         - Removed fields (see SimulationCompatMixin._REMOVED_FIELDS)
-        - Routes OOB/NetQ fields to dedicated endpoints
+        - Routes OOB fields to dedicated endpoints
         """
         handle_boolean_datetime_fields(
             kwargs, SimulationCompatMixin._BOOLEAN_DATETIME_FIELDS
@@ -501,20 +493,10 @@ class SimulationEndpointAPICompatMixin:
         drop_removed_fields(kwargs, SimulationCompatMixin._REMOVED_FIELDS)
         map_field_names(kwargs, SimulationCompatMixin._FIELD_MAPPINGS)
 
-        # Extract and route OOB/NetQ fields to dedicated endpoints
-        # Note: NetQ depends on OOB, so we handle in this order:
-        # 1. Disable NetQ (if needed)
-        # 2. Enable/disable OOB
-        # 3. Enable NetQ (if needed)
-        auto_oob_enabled, enable_dhcp, auto_netq_enabled = _extract_oob_netq_fields(
-            kwargs
-        )
+        # Extract and route OOB fields to dedicated endpoints
+        auto_oob_enabled, enable_dhcp = _extract_oob_fields(kwargs)
 
-        # Step 1: Disable NetQ first (if disabling) since NetQ requires OOB
-        if auto_netq_enabled is False:
-            self.disable_auto_netq(simulation=pk)  # type: ignore[attr-defined]
-
-        # Step 2: Handle OOB enable/disable
+        # Handle OOB enable/disable
         if auto_oob_enabled is not None:
             if auto_oob_enabled:
                 enable_kwargs = {}
@@ -523,10 +505,6 @@ class SimulationEndpointAPICompatMixin:
                 self.enable_auto_oob(simulation=pk, **enable_kwargs)
             else:
                 self.disable_auto_oob(simulation=pk)  # type: ignore[attr-defined]
-
-        # Step 3: Enable NetQ last (if enabling) since it requires OOB to be enabled
-        if auto_netq_enabled is True:
-            self.enable_auto_netq(simulation=pk)  # type: ignore[attr-defined]
 
         # Call parent patch for remaining fields, or get the simulation if no fields left
         if kwargs:

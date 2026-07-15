@@ -14,3 +14,10 @@ repos:
         types: [python]
         args: [./src]
         pass_filenames: false
+  - repo: https://gitlab-master.nvidia.com/nbu-sws/air/air-pre-commit-hooks.git
+    rev: v0.3.0
+    hooks:
+      - id: bump-copyright-year
+      - id: sync-agent-context
+        files: ^\.(cursor|claude|greptile|agents)/|^AGENTS\.md$
+        args: [--root, .]

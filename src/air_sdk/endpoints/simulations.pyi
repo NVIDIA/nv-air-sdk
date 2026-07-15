@@ -38,7 +38,6 @@ class Simulation(AirModel):
         creator: Email of the user who created the simulation
         auto_oob_enabled: Whether automatic out-of-band management is enabled
         enable_dhcp: Whether DHCP is enabled on the OOB server (when OOB is enabled)
-        auto_netq_enabled: Whether automatic NetQ is enabled
         sleep_at: When the simulation should be automatically put to sleep (stored)
         expires_at: When the simulation should be automatically deleted
         documentation: Documentation markdown or URL to documentation markdown
@@ -75,7 +74,6 @@ class Simulation(AirModel):
     creator: str
     auto_oob_enabled: bool | None
     enable_dhcp: bool | None
-    auto_netq_enabled: bool | None
     sleep_at: datetime | None
     expires_at: datetime | None
     documentation: str | None
@@ -97,9 +95,8 @@ class Simulation(AirModel):
     ) -> None:
         """Update the simulation's properties.
 
-        Note: For OOB, DHCP and NetQ configuration, use dedicated methods like
-        enable_auto_oob(), disable_auto_oob(),
-        enable_auto_netq(), disable_auto_netq(), etc.
+        Note: For OOB and DHCP configuration, use dedicated methods like
+        enable_auto_oob(), disable_auto_oob(), etc.
 
         Args:
             name: New name for the simulation
@@ -137,22 +134,6 @@ class Simulation(AirModel):
 
         Example:
             >>> simulation.disable_auto_oob()
-        """
-        ...
-
-    def enable_auto_netq(self) -> None:
-        """Enable automatic NetQ for this simulation.
-
-        Example:
-            >>> simulation.enable_auto_netq()
-        """
-        ...
-
-    def disable_auto_netq(self) -> None:
-        """Disable automatic NetQ for this simulation.
-
-        Example:
-            >>> simulation.disable_auto_netq()
         """
         ...
 
@@ -777,7 +758,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         - format: 'JSON'
         - name: Simulation name
         - content: Topology data (for JSON format: dict with 'nodes', 'links',
-          'oob', 'netq')
+          'oob')
         - ztp: Optional ZTP script content
 
         Args:
@@ -805,8 +786,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             ...     'content': {
             ...         'nodes': {...},
             ...         'links': [],
-            ...         'oob': True,
-            ...         'netq': False
+            ...         'oob': True
             ...     }
             ... }
             >>> simulation = api.simulations.import_from_simulation_manifest(
@@ -913,7 +893,6 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
     def list(  # type: ignore[override]
         self,
         *,
-        auto_netq_enabled: bool = ...,
         auto_oob_enabled: bool = ...,
         enable_dhcp: bool = ...,
         id: str = ...,
@@ -927,7 +906,6 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         """List all simulations with optional filtering.
 
                 Args:
-                    auto_netq_enabled: Filter by auto NetQ enabled status
                     auto_oob_enabled: Filter by auto OOB enabled status
                     enable_dhcp: Filter by DHCP enabled status on OOB network
                     id: Filter by simulation ID
@@ -1127,36 +1105,6 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
 
             # Using simulation ID:
             >>> api.simulations.disable_auto_oob(simulation='uuid-123')
-        """
-        ...
-
-    def enable_auto_netq(self, *, simulation: Simulation | PrimaryKey) -> None:
-        """Enable automatic NetQ for a simulation.
-
-        Args:
-            simulation: The simulation object or simulation ID
-
-        Example:
-            # Using simulation object:
-            >>> api.simulations.enable_auto_netq(simulation=simulation)
-
-            # Using simulation ID:
-            >>> api.simulations.enable_auto_netq(simulation='uuid-123')
-        """
-        ...
-
-    def disable_auto_netq(self, *, simulation: Simulation | PrimaryKey) -> None:
-        """Disable automatic NetQ for a simulation.
-
-        Args:
-            simulation: The simulation object or simulation ID
-
-        Example:
-            # Using simulation object:
-            >>> api.simulations.disable_auto_netq(simulation=simulation)
-
-            # Using simulation ID:
-            >>> api.simulations.disable_auto_netq(simulation='uuid-123')
         """
         ...
 

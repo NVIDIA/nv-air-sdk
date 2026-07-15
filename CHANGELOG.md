@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+# [1.5.0] - 2026-07-15
+- **Removed NetQ SaaS support.** NetQ SaaS reached end-of-life in December 2025 and has been removed from DSX Air. If you still need NetQ support in DSX Air, please use the NetQ image instead. The following NetQ-SaaS API surface has been removed:
+  - **`Simulation` fields** — `auto_netq_enabled`, `netq_username`, and `netq_password`. These are no longer present on `Simulation` objects (not returned by the API) and are no longer accepted in `create()` / `update()` payloads.
+  - **`Simulation` methods** — `enable_auto_netq()` and `disable_auto_netq()`. Removed from both the `Simulation` model and `SimulationEndpointAPI`.
+  - **`simulations.list()` filter** — the `auto_netq_enabled` keyword argument. Simulations can no longer be filtered by NetQ status.
+
 # [1.4.0] - 2026-05-26
 - Added new Image Sharing and Checkpoints sections to Jupyter Notebook examples.
 

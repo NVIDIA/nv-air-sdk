@@ -109,7 +109,7 @@ The BC layer automatically handles field name changes between versions:
   - v3: `simulation.name` or `simulation.update(name='My Sim')`
   - BC: Both work transparently
 
-**Note:** `auto_oob_enabled` and `auto_netq_enabled` were NOT exposed in SDK v1/v2 (even though Manager API returned them), so no BC mapping is needed.
+**Note:** `auto_oob_enabled` was NOT exposed in SDK v1/v2 (even though Manager API returned it), so no BC mapping is needed.
 
 #### Computed Properties (Read-Only)
 - **`sleep`** (v1/v2 computed from `sleep_at`)

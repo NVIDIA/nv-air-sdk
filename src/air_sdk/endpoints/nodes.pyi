@@ -21,6 +21,9 @@ from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
 
+BootDevice = Literal['hd', 'network', 'cdrom']
+BootConfig = BootDevice | list[BootDevice]
+
 class NodeLabels(TypedDict, total=False):
     """Node labels for topology organization."""
 
@@ -46,13 +49,25 @@ class NodeAdvanced(TypedDict, total=False):
     tpm: bool | None
     cpu_options: Literal['ssse3', 'sse4.1', 'sse4.2', 'popcnt'] | None
     cpu_mode: Literal['custom', 'host-model', 'host-passthrough']
-    boot: Literal['hd', 'network']
+    boot: BootConfig
     nic_model: Literal['virtio', 'e1000']
 
 class NodeCDROM(TypedDict, total=False):
     """CD-ROM configuration for a node."""
 
     image: Image | None
+
+class NodeCDROMWrite(TypedDict):
+    """CD-ROM assignment payload for node write operations.
+
+    Use as the `cdrom` argument to `create`/`update`/`patch` to attach or
+    replace a node's CD-ROM image; pass `cdrom=None` instead to eject.
+
+    Attributes:
+        image: Image object or image ID to insert into the node's CD-ROM drive.
+    """
+
+    image: Image | PrimaryKey
 
 class StoragePCIField(TypedDict, total=False):
     """Represents a single storage PCI drive configuration.
@@ -139,6 +154,7 @@ class Node(AirModel):
         labels: dict[str, Any] = ...,
         metadata: str | None = ...,
         advanced: dict[str, Any] = ...,
+        cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
     ) -> None:
@@ -156,6 +172,8 @@ class Node(AirModel):
             labels: Labels of the node
             metadata: Custom metadata for the node (JSON string)
             advanced: Advanced attributes of the node
+            cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
+                replace, or `None` to eject
             storage_pci: Storage PCI of the node
 
         Example:
@@ -171,6 +189,12 @@ class Node(AirModel):
             ...     advanced={'key': 'value'},
             ...     storage_pci={'key': 'value'},
             ... )
+
+            # attach or replace the CD-ROM image
+            >>> node.update(cdrom={'image': 'image-id'})
+
+            # eject the CD-ROM
+            >>> node.update(cdrom=None)
         """
         ...
 
@@ -349,6 +373,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         pos_y: int = ...,
         labels: NodeLabels = ...,
         advanced: NodeAdvanced = ...,
+        cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
     ) -> Node:
@@ -365,6 +390,8 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_y: (optional) Y position of the node
             labels: (optional) Labels of the node
             advanced: (optional) Advanced attributes of the node
+            cdrom: (optional) CD-ROM assignment; `{'image': <Image or id>}` to
+                attach, or `None` to leave empty
             storage_pci: (optional) Storage PCI of the node
             management_mac: (optional) MAC address of the management interface
 
@@ -374,6 +401,14 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         Example
         -------
             >>> node = api.nodes.create(simulation=sim, image=image, name='my-node')
+
+            >>> # attach a CD-ROM image at creation
+            >>> node = api.nodes.create(
+            ...     simulation=sim,
+            ...     image=image,
+            ...     name='my-node',
+            ...     cdrom={'image': 'image-id'},
+            ... )
         """
 
     def list(
@@ -451,6 +486,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         pos_y: int = ...,
         labels: NodeLabels = ...,
         advanced: NodeAdvanced = ...,
+        cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
     ) -> Node:
@@ -467,6 +503,8 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_y: Y position of the node
             labels: Labels of the node
             advanced: Advanced attributes of the node
+            cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
+                replace, or `None` to eject
             storage_pci: Storage PCI of the node
             management_mac: MAC address of the management interface
 
@@ -476,6 +514,12 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
 
             # using node ID
             >>> node = api.nodes.update(node='node-id', name='my-node')
+
+            # attach or replace the CD-ROM image
+            >>> node = api.nodes.update(node='node-id', cdrom={'image': 'image-id'})
+
+            # eject the CD-ROM
+            >>> node = api.nodes.update(node='node-id', cdrom=None)
         """
         ...
 
@@ -493,6 +537,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         labels: NodeLabels = ...,
         metadata: str | None = ...,
         advanced: NodeAdvanced = ...,
+        cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
     ) -> Node:
@@ -509,6 +554,8 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_y: Y position of the node
             labels: Labels of the node
             advanced: Advanced attributes of the node
+            cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
+                replace, or `None` to eject
             storage_pci: Storage PCI of the node
             metadata: Custom metadata for the node (JSON string)
             management_mac: MAC address of the management interface
@@ -518,6 +565,12 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
 
         Example:
             >>> node = api.nodes.patch('node-id', name='my-node')
+
+            # attach or replace the CD-ROM image
+            >>> node = api.nodes.patch('node-id', cdrom={'image': 'image-id'})
+
+            # eject the CD-ROM
+            >>> node = api.nodes.patch('node-id', cdrom=None)
         """
         ...
 
@@ -535,6 +588,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         labels: NodeLabels = ...,
         metadata: str | None = ...,
         advanced: NodeAdvanced = ...,
+        cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_mac: str = ...,
         **kwargs: Any,
@@ -555,6 +609,8 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             labels: Optional node labels
             metadata: Optional custom metadata for the node (JSON string)
             advanced: Optional advanced configuration
+            cdrom: Optional CD-ROM assignment; `{'image': <Image or id>}` to
+                attach, or `None` to leave empty
             storage_pci: Optional storage PCI configuration
             management_mac: Optional MAC address of the management interface
             **kwargs: Additional parameters

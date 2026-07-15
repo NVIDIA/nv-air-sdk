@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
@@ -16,6 +17,7 @@ from air_sdk.air_model import (
 from air_sdk.endpoints import mixins
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.utils import (
+    filter_missing,
     raise_if_invalid_response,
     validate_payload_types,
 )
@@ -43,10 +45,19 @@ class TrainingNGCData(TypedDict, total=False):
     type: str
 
 
+class TrainingAttendeeDetail(TypedDict):
+    """Read-only onboarding and access status for a training attendee."""
+
+    email: str
+    has_onboarded_in_air: bool
+    action_needed: str | None
+
+
 @dataclass(eq=False)
 class Training(AirModel):
     id: str = field(repr=False)
     name: str
+    display_name: str
     created: datetime = field(repr=False)
     modified: datetime = field(repr=False)
     creator: str = field(repr=False)
@@ -61,6 +72,9 @@ class Training(AirModel):
     sim_start_time: datetime = field(repr=False)
     sim_end_time: datetime = field(repr=False)
     attendees: list[str] = field(default_factory=list, repr=False)
+    attendee_details: list[TrainingAttendeeDetail] = field(
+        default_factory=list, repr=False
+    )
     workbenches_created: bool = field(default=False, repr=False)
 
     @classmethod
@@ -83,6 +97,9 @@ class Training(AirModel):
     def get_external_user_group(self, **kwargs: Any) -> dict[str, Any]:
         return self.model_api.get_external_user_group(training=self, **kwargs)
 
+    def get_workbenches(self, **kwargs: Any) -> mixins.IndexableIterator[Simulation]:
+        return self.model_api.list_workbenches(training=self, **kwargs)
+
 
 class TrainingEndpointAPI(
     mixins.ListApiMixin[Training],
@@ -96,6 +113,7 @@ class TrainingEndpointAPI(
     ATTENDEES_ADD_PATH = 'attendees/add'
     ATTENDEES_REMOVE_PATH = 'attendees/remove'
     EXTERNAL_USER_GROUP_PATH = 'external-user-group'
+    WORKBENCH_SIMULATIONS_PATH = 'workbench-simulations'
     model = Training
 
     @validate_payload_types
@@ -135,3 +153,17 @@ class TrainingEndpointAPI(
         raise_if_invalid_response(response)
         response_data: dict[str, Any] = response.json()
         return response_data
+
+    @validate_payload_types
+    def list_workbenches(
+        self, *, training: Training | PrimaryKey, **kwargs: Any
+    ) -> mixins.IndexableIterator[Simulation]:
+        base_url = mixins.build_resource_url(
+            self.url, training, self.WORKBENCH_SIMULATIONS_PATH
+        )
+        params = filter_missing(**kwargs)
+        params.setdefault('limit', self.__api__.client.pagination_page_size)
+        params = json.loads(mixins.serialize_payload(params))
+        return mixins.IndexableIterator(
+            self._paginate(base_url, params, self.__api__.simulations.load_model)
+        )

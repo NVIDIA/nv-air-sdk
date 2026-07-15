@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Iterator, TypedDict
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
+from air_sdk.endpoints.mixins import IndexableIterator
 from air_sdk.endpoints.simulations import Simulation
 
 class TrainingNGCData(TypedDict, total=False):
@@ -35,6 +36,29 @@ class TrainingNGCData(TypedDict, total=False):
     pendingInvitations: list[str]
     type: str
 
+class TrainingAttendeeDetail(TypedDict):
+    """Per-attendee onboarding and access status for a training attendee.
+
+    Args:
+        email: Attendee email address.
+        has_onboarded_in_air: Whether the attendee has onboarded in DSX Air.
+        action_needed: Follow-up action required for access, if any.
+
+    Returns:
+        TrainingAttendeeDetail: One typed attendee-status entry.
+
+    Example:
+        >>> detail: TrainingAttendeeDetail = {
+        ...     'email': 'student@example.com',
+        ...     'has_onboarded_in_air': False,
+        ...     'action_needed': 'User needs to log into DSX Air.',
+        ... }
+    """
+
+    email: str
+    has_onboarded_in_air: bool
+    action_needed: str | None
+
 @dataclass(eq=False)
 class Training(AirModel):
     """Training model representing a training event with NGC group and cloned simulation.
@@ -42,6 +66,7 @@ class Training(AirModel):
     Attributes:
         id: Unique identifier for the training event
         name: Name of the training event (also NGC user group name, must be kebab-case)
+        display_name: Human-readable display name for the training event
         created: Timestamp when the training was created
         modified: Timestamp when the training was last modified
         creator: Email of the client that created the training
@@ -52,6 +77,7 @@ class Training(AirModel):
         event_time: When the training event will occur (must be 5h+ in future)
         ngc_group_id: NGC external user group ID (must be kebab-case)
         attendees: List of validated attendee email addresses
+        attendee_details: Per-attendee onboarding/access status (read-only)
         sim_start_time: When workbenches are created/started
                         (1h+ future, 4h before event_time)
         sim_end_time: When workbenches expire/destroyed (24h+ after event_time)
@@ -77,6 +103,7 @@ class Training(AirModel):
 
     id: str
     name: str
+    display_name: str
     created: datetime
     modified: datetime
     creator: str
@@ -89,11 +116,13 @@ class Training(AirModel):
     sim_start_time: datetime
     sim_end_time: datetime
     attendees: list[str]
+    attendee_details: list[TrainingAttendeeDetail]
     workbenches_created: bool
 
     def update(
         self,
         *,
+        display_name: str = ...,
         event_time: datetime = ...,
         sim_start_time: datetime = ...,
         sim_end_time: datetime = ...,
@@ -102,9 +131,9 @@ class Training(AirModel):
         # fmt: off
         """Update individual fields of the training event.
 
-        Only event_time, sim_start_time, and sim_end_time can be updated.
-        Name, parent simulation, checkpoint, and attendees cannot be modified
-        via this endpoint after creation.
+        Only display_name, event_time, sim_start_time, and sim_end_time can be
+        updated. Name, parent simulation, checkpoint, and attendees cannot be
+        modified via this endpoint after creation.
 
         Timing Constraints:
             - event_time: Must be at least 5h in the future
@@ -112,6 +141,7 @@ class Training(AirModel):
             - sim_end_time: Must be at least 24h after event_time
 
         Args:
+            display_name: Human-readable display name for the training event
             event_time: When the training event will occur
             sim_start_time: When workbenches are created/started
             sim_end_time: When workbenches expire/destroyed
@@ -179,6 +209,46 @@ class Training(AirModel):
         """
         ...
 
+    def get_workbenches(
+        self,
+        *,
+        id: str = ...,
+        creator: str = ...,
+        assigned_to: str = ...,
+        **kwargs: Any,
+    ) -> IndexableIterator[Simulation]:
+        # fmt: off
+        """Get the workbench simulations for this training.
+
+        The training's ``training_simulation`` (the template) is automatically
+        excluded from the results; only attendee workbenches are returned.
+        Results are also scoped to simulations the calling user has permission
+        to read.
+
+        Args:
+            id: Filter by the workbench simulation ID
+            creator: Filter by the username of the simulation creator
+            assigned_to: Filter by the email of the user assigned to the
+                         workbench simulation. This will match ``creator``
+                         unless the assignee has never logged into DSX Air
+                         before.
+            **kwargs: Additional filter parameters
+
+        Returns:
+            Iterator of workbench :class:`Simulation` instances for this training
+
+        Example:
+            >>> # All workbenches for the training
+            >>> for sim in training.get_workbenches():
+            ...     print(sim.name)
+            >>> # Find the workbench assigned to a specific attendee
+            >>> sims = list(training.get_workbenches(
+            ...     assigned_to='student@example.com'
+            ... ))
+        """
+        ...
+        # fmt: on
+
 class TrainingEndpointAPI(BaseEndpointAPI[Training]):
     """Endpoint API for managing training events.
 
@@ -191,11 +261,13 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
     ATTENDEES_ADD_PATH: str
     ATTENDEES_REMOVE_PATH: str
     EXTERNAL_USER_GROUP_PATH: str
+    WORKBENCH_SIMULATIONS_PATH: str
     model: type[Training]
 
     def list(
         self,
         *,
+        display_name: str = ...,
         limit: int = ...,
         name: str = ...,
         ngc_group_id: str = ...,
@@ -210,21 +282,22 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
         """List all training events.
 
         Args:
+            display_name: Filter by training display name
             limit: Number of results to return per page
             name: Filter by training name
             ngc_group_id: Filter by NGC external user group ID
             offset: Initial index from which to return results
             ordering: Order by field (prefix with "-" for desc). Options:
-                      -created, -creator, -event_time, -modified, -name,
-                      -ngc_group_id, -sim_end_time, -sim_start_time,
+                      -created, -creator, -display_name, -event_time, -modified,
+                      -name, -ngc_group_id, -sim_end_time, -sim_start_time,
                       -training_simulation_name, -training_simulation_state,
-                      -workbenches_created, created, creator, event_time,
-                      modified, name, ngc_group_id, sim_end_time,
+                      -workbenches_created, created, creator, display_name,
+                      event_time, modified, name, ngc_group_id, sim_end_time,
                       sim_start_time, training_simulation_name,
                       training_simulation_state, workbenches_created
-            search: Search by name, creator, training_simulation_name,
-                    training_simulation_state, event_time, sim_start_time,
-                    sim_end_time, created
+            search: Search by name, display_name, creator,
+                    training_simulation_name, training_simulation_state,
+                    event_time, sim_start_time, sim_end_time, created
             training_simulation: Filter by template simulation ID
             workbenches_created: Filter by workbenches creation status
             **params: Additional filter parameters
@@ -251,6 +324,7 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
         event_time: datetime,
         sim_start_time: datetime,
         sim_end_time: datetime,
+        display_name: str = ...,
         parent_simulation_checkpoint: str | PrimaryKey = ...,
         **kwargs: Any,
     ) -> Training:
@@ -275,6 +349,8 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
                             future and 4h before event_time)
             sim_end_time: When workbenches expire/destroyed (must be 24h+ after
                           event_time)
+            display_name: Human-readable display name for the training event
+                          (defaults to `name` if not provided)
             parent_simulation_checkpoint: Checkpoint from parent_simulation to
                                           clone onto training_simulation (optional)
             **kwargs: Additional fields for future API compatibility
@@ -314,6 +390,7 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
         self,
         pk: PrimaryKey,
         *,
+        display_name: str = ...,
         event_time: datetime = ...,
         sim_start_time: datetime = ...,
         sim_end_time: datetime = ...,
@@ -322,10 +399,12 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
         # fmt: off
         """Update individual fields of a training event.
 
-        Only event_time, sim_start_time, and sim_end_time can be updated.
+        Only display_name, event_time, sim_start_time, and sim_end_time can be
+        updated.
 
         Args:
             pk: Training ID
+            display_name: Human-readable display name for the training event
             event_time: When the training event will occur
             sim_start_time: When workbenches are created/started
             sim_end_time: When workbenches expire/destroyed
@@ -358,6 +437,7 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
         self,
         *,
         training: Training | PrimaryKey,
+        display_name: str = ...,
         event_time: datetime = ...,
         sim_start_time: datetime = ...,
         sim_end_time: datetime = ...,
@@ -366,9 +446,9 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
         # fmt: off
         """Update individual fields of a training event.
 
-        Only event_time, sim_start_time, and sim_end_time can be updated.
-        Name, parent simulation, checkpoint, and attendees cannot be modified
-        after creation.
+        Only display_name, event_time, sim_start_time, and sim_end_time can be
+        updated. Name, parent simulation, checkpoint, and attendees cannot be
+        modified after creation.
 
         Timing Constraints:
             - event_time: Must be at least 5h in the future
@@ -377,6 +457,7 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
 
         Args:
             training: Training instance or training ID
+            display_name: Human-readable display name for the training event
             event_time: When the training event will occur
             sim_start_time: When workbenches are created/started
             sim_end_time: When workbenches expire/destroyed
@@ -468,6 +549,53 @@ class TrainingEndpointAPI(BaseEndpointAPI[Training]):
             >>> confirmed = group_data.get('confirmedUsers', [])
             >>> pending = group_data.get('pendingInvitations', [])
             >>> print(f"Total users: {len(confirmed)} confirmed, {len(pending)} pending")
+        """
+        ...
+        # fmt: on
+    def list_workbenches(
+        self,
+        *,
+        training: Training | PrimaryKey,
+        id: str = ...,
+        creator: str = ...,
+        assigned_to: str = ...,
+        limit: int = ...,
+        offset: int = ...,
+        **kwargs: Any,
+    ) -> IndexableIterator[Simulation]:
+        # fmt: off
+        """List workbench simulations associated with a training event.
+
+        Useful for instructors who need to find all attendee workbenches for a
+        given training session. The training's ``training_simulation`` (the
+        template) is automatically excluded from the results; only attendee
+        workbenches are returned. Results are also scoped to simulations the
+        calling user has permission to read.
+        
+        Args:
+            training: Training instance or training ID
+            id: Filter by the workbench simulation ID
+            creator: Filter by the username of the simulation creator
+            assigned_to: Filter by the email of the user assigned to the
+                         workbench simulation. This will match ``creator``
+                         unless the assignee has never logged into DSX Air
+                         before.
+            limit: Number of results to return per page
+            offset: Initial index from which to return results
+            **kwargs: Additional filter parameters
+
+        Returns:
+            Iterator of workbench :class:`Simulation` instances for the training
+
+        Example:
+            >>> # All workbenches for a training
+            >>> for sim in api.trainings.list_workbenches(training='training-id-123'):
+            ...     print(sim.name)
+            >>> # Find the workbench assigned to a specific attendee
+            >>> sims = list(api.trainings.list_workbenches(
+            ...     training='training-id-123',
+            ...     assigned_to='student@example.com',
+            ... ))
         """
         ...
         # fmt: on

@@ -19,7 +19,7 @@ from typing import (
 )
 
 from air_sdk.air_json_encoder import AirJSONEncoder
-from air_sdk.air_model import DataDict, PrimaryKey, TAirModel_co
+from air_sdk.air_model import DataDict, PrimaryKey, TAirModel, TAirModel_co
 from air_sdk.bc.decorators import deprecated
 from air_sdk.bc.utils import _caller_stacklevel
 from air_sdk.exceptions import AirModelAttributeError
@@ -126,22 +126,27 @@ class ListApiMixin(BaseApiMixin, Generic[TAirModel_co]):
     Handles pagination in the background.
     """
 
-    def _paginate(self, params: Dict[str, Any]) -> Iterator[TAirModel_co]:
-        """Yield model instances across all paginated responses."""
-        url: Optional[str] = self.url
+    def _paginate(
+        self,
+        url: str,
+        params: Dict[str, Any],
+        load_model: Callable[[DataDict], TAirModel],
+    ) -> Iterator[TAirModel]:
+        """Yield model instances across all paginated responses starting at `url`."""
+        page_url: Optional[str] = url
         next_url: Optional[str] = None
-        while url or next_url:
+        while page_url or next_url:
             if isinstance(next_url, str):
                 response = self.__api__.client.get(next_url)
             else:
-                assert url is not None
-                response = self.__api__.client.get(url, params=params)
+                assert page_url is not None
+                response = self.__api__.client.get(page_url, params=params)
             raise_if_invalid_response(response)
             data: PaginatedResponseData = response.json()
-            url = None
+            page_url = None
             next_url = data['next']
             for obj_data in data['results']:
-                yield self.load_model(obj_data)
+                yield load_model(obj_data)
 
     def list(self, **params: Any) -> IndexableIterator[TAirModel_co]:
         """Return an indexable iterator of model instances."""
@@ -158,7 +163,7 @@ class ListApiMixin(BaseApiMixin, Generic[TAirModel_co]):
             serialize_payload(params)
         )  # Accounts for UUIDs and AirModel params
 
-        return IndexableIterator(self._paginate(params))
+        return IndexableIterator(self._paginate(self.url, params, self.load_model))
 
 
 class CreateApiMixin(BaseApiMixin, Generic[TAirModel_co]):
