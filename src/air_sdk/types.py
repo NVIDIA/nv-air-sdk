@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from air_sdk.endpoints.user_configs import UserConfig
 
 T = TypeVar('T')
+
 
 # ============================================================================
 # Simulation State Constants
@@ -146,6 +147,17 @@ class NodeRebuildPayload(TypedDict):
     id: Node | PrimaryKey
 
 
+class NodeManagementInterfaceInfo(TypedDict, total=False):
+    """Per-interface management address info returned by the Node API.
+
+    `ip` may be `None` when the interface opts out of OOB-managed DHCP
+    while remaining wired to the leaf switch.
+    """
+
+    ip: str | None
+    mac_address: str | None
+
+
 class ResourceBudgetUsage(TypedDict):
     """Current resource usage within an organization's budget.
 
@@ -162,6 +174,15 @@ class ResourceBudgetUsage(TypedDict):
     disk_storage: float
     image_storage: int
     userconfigs: int
+
+
+class SimRequiredResources(TypedDict):
+    """Required resources for a simulation."""
+
+    cpu: int | float
+    memory: int | float
+    storage: int | float
+    compute_hours: float
 
 
 # ============================================================================

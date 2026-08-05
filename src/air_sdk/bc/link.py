@@ -82,17 +82,17 @@ class LinkEndpointAPICompatMixin:
 
         Args:
             links: List of link dictionaries with format
-                ``{"simulation_interfaces": [i1, i2]}`` (v1/v2)
-                or ``{"interfaces": [i1, i2]}`` (v3).
+                `{"simulation_interfaces": [i1, i2]}` (v1/v2)
+                or `{"interfaces": [i1, i2]}` (v3).
             **kwargs: Additional keyword arguments forwarded to
-                :meth:`create`, e.g. ``simulation``.
+                :meth:`create`, e.g. `simulation`.
 
         Returns:
             List of created Link objects.
 
         Raises:
             ValueError: If the link dictionaries are missing both
-                ``simulation_interfaces`` and ``interfaces`` keys.
+                `simulation_interfaces` and `interfaces` keys.
 
         .. deprecated::
             Use :meth:`create` for each link instead.

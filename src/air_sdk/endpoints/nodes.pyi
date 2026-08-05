@@ -20,6 +20,7 @@ from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
+from air_sdk.types import NodeManagementInterfaceInfo
 
 BootDevice = Literal['hd', 'network', 'cdrom']
 BootConfig = BootDevice | list[BootDevice]
@@ -110,8 +111,9 @@ class Node(AirModel):
         cdrom: CDROM attributes of the node
         storage_pci: Storage PCI attributes of the node
         cloud_init: Cloud-Init assignments of the node
-        management_ip: IPv4 address of the management interface (read-only)
-        management_mac: MAC address of the management interface
+        management_interfaces: Mapping of interface name to management address
+            info (for example `eth0`, `eth1`). Absent when the node has no
+            management addresses.
     """
 
     id: str
@@ -134,8 +136,7 @@ class Node(AirModel):
     advanced: NodeAdvanced
     cdrom: NodeCDROM | None
     storage_pci: dict[str, StoragePCIField] | None
-    management_ip: str | None
-    management_mac: str
+    management_interfaces: dict[str, NodeManagementInterfaceInfo] | None
 
     @classmethod
     def get_model_api(cls) -> type[NodeEndpointAPI]: ...
@@ -156,7 +157,7 @@ class Node(AirModel):
         advanced: dict[str, Any] = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
-        management_mac: str = ...,
+        management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> None:
         """Update the node's properties.
 
@@ -168,7 +169,7 @@ class Node(AirModel):
             storage: Storage of the node
             pos_x: X position of the node
             pos_y: Y position of the node
-            management_mac: MAC address of the management interface
+            management_interfaces: Per-interface management addresses
             labels: Labels of the node
             metadata: Custom metadata for the node (JSON string)
             advanced: Advanced attributes of the node
@@ -375,7 +376,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
-        management_mac: str = ...,
+        management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> Node:
         """Create a new node.
 
@@ -393,7 +394,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             cdrom: (optional) CD-ROM assignment; `{'image': <Image or id>}` to
                 attach, or `None` to leave empty
             storage_pci: (optional) Storage PCI of the node
-            management_mac: (optional) MAC address of the management interface
+            management_interfaces: (optional) Per-interface management addresses
 
         Returns:
             The created node instance
@@ -488,7 +489,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
-        management_mac: str = ...,
+        management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> Node:
         """Update a specific node by ID.
 
@@ -506,7 +507,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
                 replace, or `None` to eject
             storage_pci: Storage PCI of the node
-            management_mac: MAC address of the management interface
+            management_interfaces: Per-interface management addresses
 
         Example:
             # using node object
@@ -539,7 +540,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
-        management_mac: str = ...,
+        management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> Node:
         """Patch a specific node by ID.
 
@@ -558,7 +559,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
                 replace, or `None` to eject
             storage_pci: Storage PCI of the node
             metadata: Custom metadata for the node (JSON string)
-            management_mac: MAC address of the management interface
+            management_interfaces: Per-interface management addresses
 
         Returns:
             The patched Node object
@@ -590,7 +591,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
-        management_mac: str = ...,
+        management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
         **kwargs: Any,
     ) -> Node:
         # fmt: off
@@ -612,7 +613,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             cdrom: Optional CD-ROM assignment; `{'image': <Image or id>}` to
                 attach, or `None` to leave empty
             storage_pci: Optional storage PCI configuration
-            management_mac: Optional MAC address of the management interface
+            management_interfaces: Optional per-interface management addresses
             **kwargs: Additional parameters
 
         Returns:

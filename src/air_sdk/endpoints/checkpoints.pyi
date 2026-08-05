@@ -60,8 +60,8 @@ class Checkpoint(AirModel):
     def delete(self) -> None:
         """Delete this checkpoint.
 
-        Only checkpoints in the ``COMPLETE`` state may be deleted. Deletion
-        updates the state to ``DELETED`` and removes the stored snapshots.
+        Only checkpoints in the `COMPLETE` state may be deleted. Deletion
+        updates the state to `DELETED` and removes the stored snapshots.
 
         Example:
             >>> checkpoint.delete()
@@ -95,9 +95,9 @@ class CheckpointEndpointAPI(BaseEndpointAPI[Checkpoint]):
         # fmt: off
         """List checkpoints.
 
-        When accessed via ``simulation.checkpoints.list()``, results are
+        When accessed via `simulation.checkpoints.list()`, results are
         automatically filtered to that simulation. When accessed via
-        ``api.checkpoints.list()``, all visible checkpoints are returned
+        `api.checkpoints.list()`, all visible checkpoints are returned
         unless filtered.
 
         Args:
@@ -149,7 +149,7 @@ class CheckpointEndpointAPI(BaseEndpointAPI[Checkpoint]):
     ) -> Checkpoint:
         """Update individual fields of a checkpoint.
 
-        Only ``name`` and ``favorite`` can be modified.
+        Only `name` and `favorite` can be modified.
 
         Args:
             pk: Checkpoint UUID
@@ -171,8 +171,8 @@ class CheckpointEndpointAPI(BaseEndpointAPI[Checkpoint]):
     def delete(self, pk: PrimaryKey, **kwargs: Any) -> None:
         """Delete a checkpoint.
 
-        Only checkpoints in the ``COMPLETE`` state may be deleted. Deletion
-        updates the state to ``DELETED`` and removes the stored snapshots.
+        Only checkpoints in the `COMPLETE` state may be deleted. Deletion
+        updates the state to `DELETED` and removes the stored snapshots.
 
         Args:
             pk: Checkpoint UUID
@@ -193,7 +193,7 @@ class CheckpointEndpointAPI(BaseEndpointAPI[Checkpoint]):
     ) -> Checkpoint:
         """Update individual fields of a checkpoint.
 
-        Only ``name`` and ``favorite`` can be modified.
+        Only `name` and `favorite` can be modified.
 
         Args:
             checkpoint: Checkpoint instance or checkpoint UUID

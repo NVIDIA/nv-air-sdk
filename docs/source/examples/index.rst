@@ -22,6 +22,7 @@ Working with Simulations
    oob
    history
    ztp_scripts
+   cloud_init
 
 Resources
 ---------

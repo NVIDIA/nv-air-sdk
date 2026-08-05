@@ -18,6 +18,7 @@ from air_sdk.endpoints import mixins
 from air_sdk.endpoints.images import Image
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
+from air_sdk.types import NodeManagementInterfaceInfo
 from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload_types
 
 if TYPE_CHECKING:
@@ -49,8 +50,9 @@ class Node(BaseCompatMixin, NodeCompatMixin, AirModel):
     labels: dict[str, Any] | None = field(repr=False)
     metadata: str | None = field(repr=False)
     advanced: dict[str, Any] = field(repr=False)
-    management_ip: str | None = field(default=None, repr=False)
-    management_mac: str | None = field(default=None, repr=False)
+    management_interfaces: dict[str, NodeManagementInterfaceInfo] | None = field(
+        default=None, repr=False
+    )
 
     @classmethod
     def get_model_api(cls) -> type[NodeEndpointAPI]:

@@ -4,8 +4,8 @@
 """
 API endpoint modules.
 
-Each module contains a resource model (e.g. ``Simulation``, ``Node``) and
-its corresponding endpoint API class (e.g. ``SimulationEndpointAPI``).
+Each module contains a resource model (e.g. `Simulation`, `Node`) and
+its corresponding endpoint API class (e.g. `SimulationEndpointAPI`).
 Access these through :class:`~air_sdk.AirApi` properties rather than
 importing directly.
 """

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -12,6 +12,7 @@ from typing import Any, Iterator
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.endpoints.simulations import Simulation
+from air_sdk.types import SimRequiredResources
 
 @dataclass(eq=False)
 class MarketplaceDemo(AirModel):
@@ -30,6 +31,7 @@ class MarketplaceDemo(AirModel):
         like_count: How many unique users have liked the marketplace demo
         liked_by_client: Whether the current user has liked the marketplace demo
         published: Whether the marketplace demo is published
+        expected_resource_usage: Estimated resources required to provision the demo
         icon: The icon of the marketplace demo
         demo: Demo simulation to be used as a base for cloned simulations.
     """
@@ -45,6 +47,7 @@ class MarketplaceDemo(AirModel):
     like_count: int
     liked_by_client: bool
     published: bool
+    expected_resource_usage: SimRequiredResources
     description: str | None
     repo: str | None
     icon: str | None

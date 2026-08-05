@@ -12,7 +12,8 @@ from typing import TYPE_CHECKING, Any
 from air_sdk.bc.base import AirModelCompatMixin
 from air_sdk.bc.decorators import deprecated
 from air_sdk.bc.utils import deprecation_warn, drop_removed_fields, map_field_names
-from air_sdk.types import NodeAssignmentDataV3
+from air_sdk.const import DEFAULT_MGMT_IFACE_NAME
+from air_sdk.types import NodeAssignmentDataV3, NodeManagementInterfaceInfo
 from air_sdk.utils import raise_if_invalid_response
 
 if TYPE_CHECKING:
@@ -23,16 +24,23 @@ if TYPE_CHECKING:
 def _inject_management_fields_into_metadata(data: dict[str, Any]) -> None:
     """Inject management_ip and management_mac into metadata for v1/v2 BC.
 
-    In v1/v2, the Node metadata contained ``mgmt_ip`` and ``mgmt_mac``.
-    In v3, these are separate top-level fields. This merges them back into
-    the metadata JSON string so legacy consumers that read metadata still
-    find the values they expect.
+    In v1/v2, the Node metadata contained `mgmt_ip` and `mgmt_mac`.
+    In v3, these live under `management_interfaces`. This merges the
+    default-interface values back into the metadata JSON string so legacy
+    consumers that read metadata still find the values they expect.
 
     Args:
         data: Raw API response dict to modify in-place.
     """
     mgmt_ip = data.get('management_ip')
     mgmt_mac = data.get('management_mac')
+    if mgmt_ip is None or mgmt_mac is None:
+        mgmt_ifaces = data.get('management_interfaces') or {}
+        eth0 = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME) or {}
+        if mgmt_ip is None:
+            mgmt_ip = eth0.get('ip')
+        if mgmt_mac is None:
+            mgmt_mac = eth0.get('mac_address')
 
     if mgmt_ip is None and mgmt_mac is None:
         return
@@ -119,6 +127,94 @@ class NodeCompatMixin(AirModelCompatMixin):
         'simulation_id': 'simulation',
         'attributes': 'labels',  # v2 used attributes; v3 uses labels
     }
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        """Reject flat mgmt aliases on multi-mgmt nodes before auto-patch runs.
+
+        The deprecated `management_ip` / `management_mac` aliases only address
+        the default `eth0` interface. On a node with other management
+        interfaces the API rejects a flat PATCH, and `_patch` swallows that
+        error — leaving the local object diverged from the server. Fail fast
+        here (before `AirModel.__setattr__` auto-patches) and point users at
+        `management_interfaces`.
+        """
+        if name in ('management_ip', 'management_mac'):
+            self._assert_flat_mgmt_alias_allowed(name)
+        super().__setattr__(name, value)
+
+    def _assert_flat_mgmt_alias_allowed(self, name: str) -> None:
+        """Raise if the node has management interfaces other than `eth0`."""
+        mgmt_ifaces = getattr(self, 'management_interfaces', None) or {}
+        extra = set(mgmt_ifaces) - {DEFAULT_MGMT_IFACE_NAME}
+        if extra:
+            raise ValueError(
+                f'`{name}` cannot be used on a node with multiple management '
+                f'interfaces ({sorted(mgmt_ifaces)}); use `management_interfaces` '
+                f'instead.'
+            )
+
+    @property
+    @deprecated(
+        '`management_ip` is deprecated; read the `eth0` entry of '
+        '`management_interfaces` instead.'
+    )
+    def management_ip(self) -> str | None:
+        """Deprecated: IP of the default (`eth0`) management interface.
+
+        Use `management_interfaces` instead.
+        """
+        mgmt_ifaces = self.management_interfaces
+        if not mgmt_ifaces:
+            return None
+        eth0 = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME)
+        return eth0.get('ip') if eth0 else None
+
+    @management_ip.setter
+    @deprecated(
+        '`management_ip` is deprecated; set the `eth0` entry of '
+        '`management_interfaces` instead.'
+    )
+    def management_ip(self, value: str | None) -> None:
+        self._ensure_eth0_mgmt_iface()['ip'] = value
+
+    @property
+    @deprecated(
+        '`management_mac` is deprecated; read the `eth0` entry of '
+        '`management_interfaces` instead.'
+    )
+    def management_mac(self) -> str | None:
+        """Deprecated: MAC of the default (`eth0`) management interface.
+
+        Use `management_interfaces` instead.
+        """
+        mgmt_ifaces = self.management_interfaces
+        if not mgmt_ifaces:
+            return None
+        eth0 = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME)
+        return eth0.get('mac_address') if eth0 else None
+
+    @management_mac.setter
+    @deprecated(
+        '`management_mac` is deprecated; set the `eth0` entry of '
+        '`management_interfaces` instead.'
+    )
+    def management_mac(self, value: str | None) -> None:
+        self._ensure_eth0_mgmt_iface()['mac_address'] = value
+
+    def _ensure_eth0_mgmt_iface(self) -> NodeManagementInterfaceInfo:
+        """Return the default mgmt iface entry, creating parent dicts if needed."""
+        mgmt_ifaces: dict[str, NodeManagementInterfaceInfo] | None = (
+            self.management_interfaces
+        )
+        if mgmt_ifaces is None:
+            mgmt_ifaces = {DEFAULT_MGMT_IFACE_NAME: {}}
+            # Bypass __setattr__ to avoid triggering a spurious auto-patch on
+            # the parent `management_interfaces` field; the caller's PATCH for
+            # the individual mgmt field is the only request we want to send.
+            object.__setattr__(self, 'management_interfaces', mgmt_ifaces)
+        elif DEFAULT_MGMT_IFACE_NAME not in mgmt_ifaces:
+            mgmt_ifaces[DEFAULT_MGMT_IFACE_NAME] = {}
+        return mgmt_ifaces[DEFAULT_MGMT_IFACE_NAME]
 
     # Fields that were removed in v3
     _REMOVED_FIELDS = [
@@ -397,9 +493,9 @@ class NodeEndpointAPICompatMixin:
     def load_model(self, data: dict[str, Any]) -> Any:
         """Load a Node model with v1/v2 metadata backward compatibility.
 
-        Injects ``mgmt_ip`` and ``mgmt_mac`` into the metadata JSON string
-        from the v3 ``management_ip`` and ``management_mac`` fields so that
-        legacy consumers reading metadata still find these values.
+        Injects `mgmt_ip` and `mgmt_mac` into the metadata JSON string
+        from the v3 `management_interfaces` payload so that legacy
+        consumers reading metadata still find these values.
         """
         _inject_management_fields_into_metadata(data)
         return super().load_model(data)  # type: ignore[misc]

@@ -1,0 +1,3 @@
+# cloud-init meta-data example for an AIR simulation node.
+instance-id: server1
+local-hostname: server1

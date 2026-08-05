@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from air_sdk.endpoints import mixins
 
 # Import Simulation at runtime (not just TYPE_CHECKING) because get_type_hints() needs it
 from air_sdk.endpoints.simulations import Simulation
+from air_sdk.types import SimRequiredResources
 from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload_types
 
 
@@ -34,6 +35,7 @@ class MarketplaceDemo(BaseCompatMixin, MarketplaceDemoCompatMixin, AirModel):
     like_count: int = field(repr=False)
     liked_by_client: bool = field(repr=False)
     published: bool = field(repr=False)
+    expected_resource_usage: SimRequiredResources = field(repr=False)
     description: str | None
     repo: str | None
     icon: str | None

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nv-air-sdk"
-version = "1.5.0"
+version = "1.6.0"
 description = "Python SDK for creating, running and managing simulations on NVIDIA Air"
 authors = ["Air Team <air@nvidia.com>"]
 readme = "README.md"
@@ -22,7 +22,7 @@ python = "^3.10"
 python-dateutil = "^2.9.0.post0"
 python-dotenv = "^1.0.1"
 requests = "^2.32.0"
-urllib3 = "^2.0.0"
+urllib3 = "^2.7.0"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.11.0"
@@ -41,6 +41,12 @@ sphinx = "^8.1"
 nvidia-sphinx-theme = "^0.0"
 sphinx-autoapi = "^3.4"
 nbsphinx = "^0.9"
+
+# Explicit versions of transitive dependencies
+# Versions are bumped in order to resolve CVEs
+nbconvert = "7.17.1"
+mistune = "3.3.2"
+bleach = "6.4.0"
 
 [build-system]
 requires = ["poetry-core"]

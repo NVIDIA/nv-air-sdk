@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.6.0] - 2026-08-05
+- Added `expected_resource_usage` as a read-only field to the MarketplaceDemo-related features.
+- Added support for multiple management interfaces per node. `Node` now exposes a `management_interfaces` field mapping each interface name (e.g. `eth0`, `eth1`) to its `{ip, mac_address}`, and `nodes.create()` / `update()` / `patch()` accept `management_interfaces`.
+- Deprecated the `management_ip` and `management_mac` node attributes. They continue to work as backward-compatible aliases for the default (`eth0`) management interface but now emit a `DeprecationWarning`; use `management_interfaces` instead. Assigning them on a node with multiple management interfaces raises an error to avoid silently diverging from the server.
+
 
 # [1.5.0] - 2026-07-15
 - **Removed NetQ SaaS support.** NetQ SaaS reached end-of-life in December 2025 and has been removed from DSX Air. If you still need NetQ support in DSX Air, please use the NetQ image instead. The following NetQ-SaaS API surface has been removed:

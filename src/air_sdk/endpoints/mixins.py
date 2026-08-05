@@ -85,11 +85,11 @@ _T = TypeVar('_T')
 
 
 class IndexableIterator(Iterator[_T]):
-    """Iterator wrapper that supports ``__getitem__`` for backward compatibility.
+    """Iterator wrapper that supports `__getitem__` for backward compatibility.
 
-    Allows legacy code like ``api.images.list()[0]`` to keep working
+    Allows legacy code like `api.images.list()[0]` to keep working
     while emitting a `DeprecationWarning` guiding users toward
-    ``next(api.images.list())`` or ``for`` loops instead.
+    `next(api.images.list())` or `for` loops instead.
     """
 
     def __init__(self, gen: Iterator[_T]) -> None:

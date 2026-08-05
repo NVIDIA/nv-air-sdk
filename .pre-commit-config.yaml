@@ -1,18 +1,28 @@
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.2
+    # Ruff version.
+    rev: v0.11.8
     hooks:
+      # Run the linter, and fix issues that are safely-fixable.
       - id: ruff
         args: [ --fix ]
+      # Run the formatter.
       - id: ruff-format
   - repo: local
     hooks:
       - id: mypy
         name: mypy
-        entry: mypy
+        entry: make mypy
         language: system
-        types: [python]
-        args: [./src]
+        pass_filenames: false
+      - id: public-api
+        name: check `from air_sdk import *`
+        description: >-
+          Catches __all__ entries only importable under `if TYPE_CHECKING:`,
+          which mypy/ruff miss but break `from air_sdk import *` at runtime.
+        entry: poetry run python -c "from air_sdk import *"
+        language: system
+        files: ^src/air_sdk/(__init__\.py|endpoints/.*\.py)$
         pass_filenames: false
   - repo: https://gitlab-master.nvidia.com/nbu-sws/air/air-pre-commit-hooks.git
     rev: v0.3.0

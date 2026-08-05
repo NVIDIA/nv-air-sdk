@@ -4,13 +4,13 @@
 """
 NVIDIA Air SDK.
 
-This is the API reference for the ``air_sdk`` package. Use the navigation
+This is the API reference for the `air_sdk` package. Use the navigation
 to browse individual modules:
 
-- ``endpoints`` — per-resource docs (simulations, nodes, images, etc.)
-- ``const`` — SDK constants and configuration values
-- ``exceptions`` — error types raised by the SDK
-- ``types`` — TypedDict and enum definitions used in API payloads
+- `endpoints` — per-resource docs (simulations, nodes, images, etc.)
+- `const` — SDK constants and configuration values
+- `exceptions` — error types raised by the SDK
+- `types` — TypedDict and enum definitions used in API payloads
 """
 
 from __future__ import annotations
@@ -34,6 +34,7 @@ __all__ = [
     'Platform',
     'ResourceBudgetUsage',
     'Resources',
+    'SimRequiredResources',
     'SimState',
     # endpoints
     'Checkpoint',
@@ -50,6 +51,7 @@ __all__ = [
     'LinkEndpointApi',
     'SimulationInterfaceApi',
     'SimulationNodeApi',
+    'System',
     'SystemEndpointAPI',
     'ImageApi',
     'ImageEndpointApi',
@@ -84,6 +86,7 @@ from air_sdk.types import (
     Platform,
     ResourceBudgetUsage,
     Resources,
+    SimRequiredResources,
     SimState,
 )
 
@@ -489,6 +492,7 @@ from air_sdk.endpoints import (  # noqa: E402
     Checkpoint,
     CheckpointEndpointAPI,
     ImageEndpointAPI,
+    ImageShareEndpointAPI,
     InterfaceEndpointAPI,
     LinkEndpointAPI,
     MarketplaceDemoEndpointAPI,
@@ -502,6 +506,8 @@ from air_sdk.endpoints import (  # noqa: E402
     SimulationEndpointAPI,
     SSHKey,
     SSHKeyEndpointAPI,
+    System,
+    SystemEndpointAPI,
     Training,
     TrainingEndpointAPI,
     UserConfigEndpointAPI,

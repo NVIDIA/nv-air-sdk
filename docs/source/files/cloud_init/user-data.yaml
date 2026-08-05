@@ -1,0 +1,29 @@
+#cloud-config
+# Shared cloud-init user-data example for AIR simulation nodes.
+# See https://cloudinit.readthedocs.io/ for the full user-data schema.
+
+users:
+  - name: ubuntu
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: true
+    # Replace with your own SSH public key to log in as this user.
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAA...replace-with-your-own-public-key... user@example
+    # Alternatively, enable password login instead of (or in addition to) an
+    # SSH key. Never commit a real password; generate a hash locally with
+    # `mkpasswd --method=SHA-512` and set your own placeholder before use:
+    #   lock_passwd: false
+    #   hashed_passwd: "<your-hashed-password>"
+
+# Disable password-based SSH login; use key-based auth only.
+# Set to true if you enable the password login shown above.
+ssh_pwauth: false
+
+package_update: true
+packages:
+  - curl
+  - vim
+
+runcmd:
+  - echo "Cloud-init user-data applied by AIR" > /etc/motd

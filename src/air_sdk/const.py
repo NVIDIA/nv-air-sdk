@@ -17,6 +17,9 @@ DEFAULT_CONNECT_TIMEOUT = timedelta(seconds=16)
 DEFAULT_READ_TIMEOUT = timedelta(seconds=61)
 DEFAULT_PAGINATION_PAGE_SIZE = 200  # Objects per paginated response
 
+# Default OOB management interface (air-api: const.OOB.DEFAULT_MGMT_IFACE_NAME)
+DEFAULT_MGMT_IFACE_NAME = 'eth0'
+
 # Request retry configuration
 DEFAULT_RETRY_ATTEMPTS: int = 5
 DEFAULT_RETRY_BACKOFF_FACTOR: float = 1.0
