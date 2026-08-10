@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from collections.abc import Mapping
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from air_sdk.bc.base import AirModelCompatMixin
 from air_sdk.bc.decorators import deprecated
@@ -19,6 +20,32 @@ from air_sdk.utils import raise_if_invalid_response
 if TYPE_CHECKING:
     from air_sdk.bc import CloudInit
     from air_sdk.endpoints.simulations import Simulation
+
+_MgmtEntryT = TypeVar('_MgmtEntryT', bound=Mapping[str, Any])
+
+
+def _resolve_legacy_mgmt_entry(
+    mgmt_ifaces: Mapping[str, _MgmtEntryT] | None,
+) -> _MgmtEntryT | None:
+    """Return the entry the flat `management_ip`/`management_mac` aliases read.
+
+    Normally that is `eth0`. Some nodes have no `eth0` management interface at
+    all -- `oob-mgmt-server` manages over `eth1`, and plugin nodes take their
+    management interface names from `PortMapping.port_map.mgmt`. For those the
+    single entry is unambiguous, so return it; the pre-multi-mgmt API reported
+    exactly that address under `management_ip`.
+
+    Returns `None` for a genuine multi-management node with no `eth0`, since no
+    one entry is the right answer -- read `management_interfaces` instead.
+    """
+    if not mgmt_ifaces:
+        return None
+    default_entry = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME)
+    if default_entry is not None:
+        return default_entry
+    if len(mgmt_ifaces) == 1:
+        return next(iter(mgmt_ifaces.values()))
+    return None
 
 
 def _inject_management_fields_into_metadata(data: dict[str, Any]) -> None:
@@ -35,12 +62,13 @@ def _inject_management_fields_into_metadata(data: dict[str, Any]) -> None:
     mgmt_ip = data.get('management_ip')
     mgmt_mac = data.get('management_mac')
     if mgmt_ip is None or mgmt_mac is None:
-        mgmt_ifaces = data.get('management_interfaces') or {}
-        eth0 = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME) or {}
+        entry: Mapping[str, Any] = (
+            _resolve_legacy_mgmt_entry(data.get('management_interfaces')) or {}
+        )
         if mgmt_ip is None:
-            mgmt_ip = eth0.get('ip')
+            mgmt_ip = entry.get('ip')
         if mgmt_mac is None:
-            mgmt_mac = eth0.get('mac_address')
+            mgmt_mac = entry.get('mac_address')
 
     if mgmt_ip is None and mgmt_mac is None:
         return
@@ -143,7 +171,14 @@ class NodeCompatMixin(AirModelCompatMixin):
         super().__setattr__(name, value)
 
     def _assert_flat_mgmt_alias_allowed(self, name: str) -> None:
-        """Raise if the node has management interfaces other than `eth0`."""
+        """Raise if the node has management interfaces other than `eth0`.
+
+        Writes stay strict even where reads now fall back
+        (:func:`_resolve_legacy_mgmt_entry`): a flat write always targets
+        `eth0`, so on a node managed over another interface it would create a
+        second interface rather than update the existing one, and the API
+        rejects it.
+        """
         mgmt_ifaces = getattr(self, 'management_interfaces', None) or {}
         extra = set(mgmt_ifaces) - {DEFAULT_MGMT_IFACE_NAME}
         if extra:
@@ -161,13 +196,13 @@ class NodeCompatMixin(AirModelCompatMixin):
     def management_ip(self) -> str | None:
         """Deprecated: IP of the default (`eth0`) management interface.
 
+        Falls back to the node's sole management interface when it is not named
+        `eth0` (e.g. `oob-mgmt-server`, which manages over `eth1`).
+
         Use `management_interfaces` instead.
         """
-        mgmt_ifaces = self.management_interfaces
-        if not mgmt_ifaces:
-            return None
-        eth0 = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME)
-        return eth0.get('ip') if eth0 else None
+        entry = _resolve_legacy_mgmt_entry(self.management_interfaces)
+        return entry.get('ip') if entry else None
 
     @management_ip.setter
     @deprecated(
@@ -185,13 +220,13 @@ class NodeCompatMixin(AirModelCompatMixin):
     def management_mac(self) -> str | None:
         """Deprecated: MAC of the default (`eth0`) management interface.
 
+        Falls back to the node's sole management interface when it is not named
+        `eth0` (e.g. `oob-mgmt-server`, which manages over `eth1`).
+
         Use `management_interfaces` instead.
         """
-        mgmt_ifaces = self.management_interfaces
-        if not mgmt_ifaces:
-            return None
-        eth0 = mgmt_ifaces.get(DEFAULT_MGMT_IFACE_NAME)
-        return eth0.get('mac_address') if eth0 else None
+        entry = _resolve_legacy_mgmt_entry(self.management_interfaces)
+        return entry.get('mac_address') if entry else None
 
     @management_mac.setter
     @deprecated(

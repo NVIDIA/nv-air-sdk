@@ -21,6 +21,8 @@ __all__ = [
     'HistoryEndpointAPI',
     'Image',
     'ImageEndpointAPI',
+    'ImagePublishAccessRecord',
+    'ImagePublishAccessRecordEndpointAPI',
     'ImageShareEndpointAPI',
     'Node',
     'NodeEndpointAPI',
@@ -44,6 +46,8 @@ __all__ = [
     'MarketplaceDemoEndpointAPI',
     'MarketplaceDemoApi',  # BC alias for v1
     'MarketplaceDemoEndpointApi',  # BC alias for v2
+    'MarketplaceDemoPublishAccessRecord',
+    'MarketplaceDemoPublishAccessRecordEndpointAPI',
     'MarketplaceDemoTagEndpointAPI',
     'InterfaceApi',  # BC alias for v1
     'InterfaceEndpointApi',  # BC alias for v2
@@ -90,6 +94,10 @@ from air_sdk.endpoints import mixins
 from air_sdk.endpoints.checkpoints import Checkpoint, CheckpointEndpointAPI
 from air_sdk.endpoints.fleets import Fleet, FleetEndpointAPI
 from air_sdk.endpoints.history import History, HistoryEndpointAPI
+from air_sdk.endpoints.image_publish_access_records import (
+    ImagePublishAccessRecord,
+    ImagePublishAccessRecordEndpointAPI,
+)
 from air_sdk.endpoints.images import (
     Image,
     ImageEndpointAPI,
@@ -99,6 +107,10 @@ from air_sdk.endpoints.images import (
 from air_sdk.endpoints.interfaces import Interface, InterfaceEndpointAPI
 from air_sdk.endpoints.links import Link, LinkEndpointAPI
 from air_sdk.endpoints.manifests import Manifest, ManifestEndpointAPI
+from air_sdk.endpoints.marketplace_demo_publish_access_records import (
+    MarketplaceDemoPublishAccessRecord,
+    MarketplaceDemoPublishAccessRecordEndpointAPI,
+)
 from air_sdk.endpoints.marketplace_demo_tags import (
     MarketplaceDemoTag,
     MarketplaceDemoTagEndpointAPI,

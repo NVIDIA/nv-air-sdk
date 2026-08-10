@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.6.1] - 2026-08-09
+- Fixed `Node.management_ip` / `Node.management_mac` returning `None` on nodes whose only management interface is not named `eth0` - most visibly `oob-mgmt-server`, which manages over `eth1`. The deprecated aliases now fall back to the node's sole management interface, restoring the pre-1.6.0 value. Nodes with several management interfaces and no `eth0` still return `None`; read `management_interfaces` for those. Assignment is unchanged and still raises, since a flat write always targets `eth0`.
+
 # [1.6.0] - 2026-08-05
 - Added `expected_resource_usage` as a read-only field to the MarketplaceDemo-related features.
 - Added support for multiple management interfaces per node. `Node` now exposes a `management_interfaces` field mapping each interface name (e.g. `eth0`, `eth1`) to its `{ip, mac_address}`, and `nodes.create()` / `update()` / `patch()` accept `management_interfaces`.

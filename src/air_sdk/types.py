@@ -14,6 +14,7 @@ from typing import (
     Optional,
     Tuple,
     Type,
+    TypeAlias,
     TypedDict,
     TypeVar,
     Union,
@@ -68,6 +69,27 @@ class SimState(str, Enum):
     TRAINING = 'TRAINING'
     PREPARE_REBUILD = 'PREPARE_REBUILD'
     REBUILDING = 'REBUILDING'
+
+
+DEMO_SIMULATION_STATE: TypeAlias = Literal['DEMO', 'CLONING', 'INVALID']
+
+
+# ============================================================================
+# Publish Access Record Constants
+# ============================================================================
+
+PAR_STATUS: TypeAlias = Literal[
+    'PENDING',
+    'PENDING_ELEVATION',
+    'PENDING_RESTRICTION',
+    'PENDING_UNPUBLISH',
+    'PENDING_ALLOWLIST',
+    'APPROVED_PENDING_IMAGE_PUBLISH',
+    'APPROVED',
+    'DENIED',
+    'REMOVED',
+    'CANCELLED',
+]
 
 
 # ============================================================================

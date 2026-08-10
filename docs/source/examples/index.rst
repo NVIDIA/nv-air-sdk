@@ -32,6 +32,8 @@ Resources
 
    images
    nodes
+   marketplace_demos
+   publishing
 
 Administration
 --------------

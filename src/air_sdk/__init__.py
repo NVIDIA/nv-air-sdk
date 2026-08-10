@@ -55,10 +55,14 @@ __all__ = [
     'SystemEndpointAPI',
     'ImageApi',
     'ImageEndpointApi',
+    'ImagePublishAccessRecord',
+    'ImagePublishAccessRecordEndpointAPI',
     'ImageShareEndpointAPI',
     'MarketplaceDemoEndpointAPI',
     'MarketplaceDemoApi',
     'MarketplaceDemoEndpointApi',
+    'MarketplaceDemoPublishAccessRecord',
+    'MarketplaceDemoPublishAccessRecordEndpointAPI',
     'MarketplaceDemoTagEndpointAPI',
     'MarketplaceDemoTagApi',
     'SSHKey',
@@ -97,11 +101,14 @@ if TYPE_CHECKING:
         FleetEndpointAPI,
         HistoryEndpointAPI,
         ImageEndpointAPI,
+        ImagePublishAccessRecordEndpointAPI,
         ImageShareEndpointAPI,
         InterfaceEndpointAPI,
         LinkEndpointAPI,
         ManifestEndpointAPI,
         MarketplaceDemoEndpointAPI,
+        MarketplaceDemoPublishAccessRecord,
+        MarketplaceDemoPublishAccessRecordEndpointAPI,
         MarketplaceDemoTagEndpointAPI,
         NodeEndpointAPI,
         NodeInstructionEndpointAPI,
@@ -234,6 +241,12 @@ class AirApi:
         return ImageShareEndpointAPI(self)
 
     @property
+    def image_publish_access_records(self) -> ImagePublishAccessRecordEndpointAPI:
+        from .endpoints import ImagePublishAccessRecordEndpointAPI
+
+        return ImagePublishAccessRecordEndpointAPI(self)
+
+    @property
     def simulations(self) -> SimulationEndpointAPI:
         from .endpoints import SimulationEndpointAPI
 
@@ -328,6 +341,14 @@ class AirApi:
         from .endpoints import MarketplaceDemoEndpointAPI
 
         return MarketplaceDemoEndpointAPI(self)
+
+    @property
+    def marketplace_demo_publish_access_records(
+        self,
+    ) -> MarketplaceDemoPublishAccessRecordEndpointAPI:
+        from .endpoints import MarketplaceDemoPublishAccessRecordEndpointAPI
+
+        return MarketplaceDemoPublishAccessRecordEndpointAPI(self)
 
     @property
     def marketplace_demo_tags(self) -> MarketplaceDemoTagEndpointAPI:
@@ -492,10 +513,14 @@ from air_sdk.endpoints import (  # noqa: E402
     Checkpoint,
     CheckpointEndpointAPI,
     ImageEndpointAPI,
+    ImagePublishAccessRecord,
+    ImagePublishAccessRecordEndpointAPI,
     ImageShareEndpointAPI,
     InterfaceEndpointAPI,
     LinkEndpointAPI,
     MarketplaceDemoEndpointAPI,
+    MarketplaceDemoPublishAccessRecord,
+    MarketplaceDemoPublishAccessRecordEndpointAPI,
     MarketplaceDemoTagEndpointAPI,
     NodeEndpointAPI,
     Organization,

@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from dataclasses import Field, InitVar, asdict, dataclass, fields, is_dataclass
 from datetime import datetime
 from functools import cached_property
+from http import HTTPStatus
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -26,6 +27,7 @@ from typing import (
     cast,
     get_origin,
     get_type_hints,
+    overload,
 )
 from uuid import UUID
 
@@ -44,6 +46,7 @@ from air_sdk.utils import (
     is_dunder,
     iso_string_to_datetime,
     join_urls,
+    raise_if_invalid_response,
     to_uuid,
 )
 
@@ -659,3 +662,48 @@ class BaseEndpointAPI(EndpointMethodMixin, Generic[TAirModel_co]):
                 f'expected `{hint.__name__}`: {provided_value}'
             )
         return provided_value
+
+    @overload
+    def _patch_resource_action(
+        self,
+        resource: TAirModel_co | PrimaryKey,
+        sub_path: str,
+        *,
+        status_code: Literal[HTTPStatus.OK] = HTTPStatus.OK,
+        refresh_resource: bool = True,
+        **kwargs: Any,
+    ) -> TAirModel_co: ...
+
+    @overload
+    def _patch_resource_action(
+        self,
+        resource: TAirModel_co | PrimaryKey,
+        sub_path: str,
+        *,
+        status_code: Literal[HTTPStatus.NO_CONTENT],
+        refresh_resource: bool = True,
+        **kwargs: Any,
+    ) -> None: ...
+
+    def _patch_resource_action(
+        self,
+        resource: TAirModel_co | PrimaryKey,
+        sub_path: str,
+        *,
+        status_code: HTTPStatus = HTTPStatus.OK,
+        refresh_resource: bool = True,
+        **kwargs: Any,
+    ) -> TAirModel_co | None:
+        """PATCH a sub-path action on a resource instance or primary key."""
+        from air_sdk.endpoints.mixins import serialize_payload
+
+        resource_pk = resource.__pk__ if isinstance(resource, AirModel) else resource
+        action_url = join_urls(self.url, str(resource_pk), sub_path)
+        response = self.__api__.client.patch(action_url, data=serialize_payload(kwargs))
+        data_type = None if status_code == HTTPStatus.NO_CONTENT else dict
+        raise_if_invalid_response(response, status_code=status_code, data_type=data_type)
+        if refresh_resource and isinstance(resource, AirModel):
+            resource.refresh()
+        if status_code == HTTPStatus.NO_CONTENT:
+            return None
+        return self.load_model(response.json())

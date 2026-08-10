@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -19,20 +19,22 @@ class MarketplaceDemoCompatMixin(AirModelCompatMixin):
 
     This maintains compatibility with MarketplaceDemo fields and methods from older
     SDK versions:
-    - Field mappings: liked_by_account → liked_by_client, owner/owner_email → creator,
-      snapshot → demo (v1/v2 → v3)
+    - Field mappings: owner/owner_email → creator, snapshot → demo (v1/v2 → v3)
     """
 
     # Field mappings: old (v1/v2) → new (v3)
     _FIELD_MAPPINGS = {
-        'liked_by_account': 'liked_by_client',
         'owner_email': 'creator',
         'snapshot': 'demo',
         'owner': 'creator',
     }
 
     # Fields and filters that were removed in v3
-    _REMOVED_FIELDS: list[str] = []
+    _REMOVED_FIELDS: list[str] = [
+        'liked_by_account',
+        'liked_by_client',
+        'like_count',
+    ]
 
     def update(self, *args: Any, **kwargs: Any) -> None:
         """Update method with field name compatibility for MarketplaceDemos.

@@ -9,7 +9,7 @@ Stub file for images endpoint type hints.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterator, Literal
+from typing import Iterator, List, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 
@@ -60,6 +60,7 @@ class Image(AirModel):
         emulation_version: The version of the emulation the image supports
         provider: Provider of the image
         published: Whether the image is published
+        publicly_published: Whether a published image is publicly accessible
         upload_status: Status of the image upload
         last_uploaded_at: Timestamp when the image was last uploaded
         size: Size of the image
@@ -68,6 +69,7 @@ class Image(AirModel):
         notes: Notes about the image
         release_notes: Release notes for the image
         user_manual: User manual for the image
+        publish_access_record_id: UUID of the active publish access record, or None
     """
 
     id: str
@@ -86,6 +88,7 @@ class Image(AirModel):
     emulation_version: str
     provider: str
     published: bool
+    publicly_published: bool
     upload_status: str
     last_uploaded_at: datetime | None
     size: int
@@ -94,6 +97,7 @@ class Image(AirModel):
     notes: str | None
     release_notes: str | None
     user_manual: str | None
+    publish_access_record_id: str | None
 
     @classmethod
     def get_model_api(cls) -> type[ImageEndpointAPI]: ...
@@ -184,12 +188,18 @@ class Image(AirModel):
         *,
         name: str = ...,
         version: str = ...,
+        prefer_public: bool = ...,
+        allowed_orgs: list[str] = ...,
+        justification: str = ...,
     ) -> Image:
         """Publish the image.
 
         Args:
             name: new name of the image
             version: new version of the image
+            prefer_public: whether to make the image publicly accessible
+            allowed_orgs: list of org UUIDs to allowlist when not public
+            justification: audit text describing the publish reason
 
         Returns:
             Image: the published image instance
@@ -218,6 +228,108 @@ class Image(AirModel):
         """
         ...
 
+    def request_publish(
+        self,
+        *,
+        justification: str,
+        prefer_public: bool = ...,
+        allowed_orgs_request_text: str = ...,
+        name: str = ...,
+        version: str = ...,
+    ) -> Image:
+        """Submit a request to publish this image.
+
+        Args:
+            justification: Reason for requesting publication
+            prefer_public: Whether to prefer public access over allowlist
+            allowed_orgs_request_text: Free-text description of orgs to allowlist
+            name: New name to apply on publish
+            version: New version to apply on publish
+
+        Returns:
+            Image: the image instance with updated publish_access_record_id
+
+        Example:
+            >>> image.request_publish(justification='Ready for community use')
+        """
+        ...
+
+    def request_unpublish(
+        self,
+        *,
+        justification: str,
+        name: str = ...,
+        version: str = ...,
+    ) -> Image:
+        """Submit a request to unpublish this image.
+
+        Args:
+            justification: Reason for requesting unpublication
+            name: New name to apply on unpublish
+            version: New version to apply on unpublish
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> image.request_unpublish(justification='No longer maintained')
+        """
+        ...
+
+    def request_public(
+        self,
+        *,
+        prefer_public: bool,
+        justification: str,
+    ) -> Image:
+        """Submit a request to change image visibility to public or restricted.
+
+        Args:
+            prefer_public: Whether to make the image publicly accessible
+            justification: Reason for requesting the visibility change
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> image.request_public(prefer_public=True, justification='Open source')
+        """
+        ...
+
+    def request_allowlist_change(
+        self,
+        *,
+        justification: str,
+        allowed_orgs_request_text: str,
+    ) -> Image:
+        """Submit a request to change the allowlist for this image.
+
+        Args:
+            justification: Reason for requesting the allowlist change
+            allowed_orgs_request_text: Free-text description of orgs to allowlist
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> image.request_allowlist_change(
+            ...     justification='Add partner orgs',
+            ...     allowed_orgs_request_text='org-a, org-b',
+            ... )
+        """
+        ...
+
+    def cancel_publish_access_record(self) -> Image:
+        """Cancel the active publish access record for this image.
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> image.cancel_publish_access_record()
+        """
+        ...
+
     def share(self, *, target_org: str, expires_at: datetime = ...) -> ImageShare:
         """Share the image with another organization.
 
@@ -238,6 +350,15 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
     """API client for image endpoints."""
 
     API_PATH: str
+    API_CLEAR_UPLOAD_PATH: str
+    API_PUBLISH_PATH: str
+    API_UNPUBLISH_PATH: str
+    API_REQUEST_PUBLISH_PATH: str
+    API_REQUEST_UNPUBLISH_PATH: str
+    API_REQUEST_PUBLIC_PATH: str
+    API_REQUEST_ALLOWLIST_CHANGE_PATH: str
+    API_CANCEL_PUBLISH_ACCESS_RECORD_PATH: str
+    API_CLAIM_IMAGE_SHARE_PATH: str
     model: type[Image]
 
     def create(
@@ -321,15 +442,17 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         includes_air_agent: bool = ...,
         provider: Literal['VM', 'CONTAINER'] = ...,
         published: bool = ...,
+        publicly_published: bool = ...,
         upload_status: Literal[
             'READY',
             'UPLOADING',
             'VALIDATING',
-            'COMPLETED',
-            'PUBLISHED',
-            'UNPUBLISHED',
+            'COMPLETE',
+            'PUBLISHING',
             'UNPUBLISHING',
             'COPYING_FROM_IMAGE_SHARE',
+            'PENDING_PUBLISH',
+            'PENDING_UNPUBLISH',
         ] = ...,
         hash: str = ...,
         is_owned_by_client: bool = ...,
@@ -350,6 +473,7 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
             emulation_version: The version of the emulation the image supports
             provider: Provider of the image
             published: Whether the image is published
+            publicly_published: Whether a published image is publicly accessible
             upload_status: Status of the image upload
             last_uploaded_at: Timestamp when the image was last uploaded
             hash: Hash of the image
@@ -454,23 +578,29 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         image: Image | PrimaryKey,
         name: str = ...,
         version: str = ...,
+        prefer_public: bool = ...,
+        allowed_orgs: List[str] = ...,
+        justification: str = ...,
     ) -> Image:
         """Publish the image.
 
         Args:
         Required parameters:
-            image: image to publish
+            image: image to publish (Image instance or image ID)
 
         Optional Parameters:
             name: The name of the image
             version: The version of the image
+            prefer_public: whether to make the image publicly accessible
+            allowed_orgs: list of org UUIDs to allowlist when not public
+            justification: audit text describing the publish reason
 
         Returns:
-            None
+            Image: the published image instance
 
         Example
         -------
-            >>> api.images.publish(image)
+            >>> api.images.publish(image=image)
         """
         ...
 
@@ -495,6 +625,133 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         -------
             >>> api.images.unpublish(image)
             >>> api.images.unpublish(image, name='new-name', version='new-version')
+        """
+        ...
+
+    def request_publish(
+        self,
+        *,
+        image: Image | PrimaryKey,
+        justification: str,
+        prefer_public: bool = ...,
+        allowed_orgs_request_text: str = ...,
+        name: str = ...,
+        version: str = ...,
+    ) -> Image:
+        """Submit a request to publish an image.
+
+        Args:
+        Required parameters:
+            image: image to request publication for (Image instance or image ID)
+            justification: Reason for requesting publication
+
+        Optional parameters:
+            prefer_public: Whether to prefer public access over allowlist
+            allowed_orgs_request_text: Free-text description of orgs to allowlist
+            name: New name to apply on publish
+            version: New version to apply on publish
+
+        Returns:
+            Image: the image instance with updated publish_access_record_id
+
+        Example:
+            >>> api.images.request_publish(image=image, justification='Ready')
+        """
+        ...
+
+    def request_unpublish(
+        self,
+        *,
+        image: Image | PrimaryKey,
+        justification: str,
+        name: str = ...,
+        version: str = ...,
+    ) -> Image:
+        """Submit a request to unpublish an image.
+
+        Args:
+        Required parameters:
+            image: image to request unpublication for (Image instance or image ID)
+            justification: Reason for requesting unpublication
+
+        Optional parameters:
+            name: New name to apply on unpublish
+            version: New version to apply on unpublish
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> api.images.request_unpublish(image=image, justification='Deprecated')
+        """
+        ...
+
+    def request_public(
+        self,
+        *,
+        image: Image | PrimaryKey,
+        prefer_public: bool,
+        justification: str,
+    ) -> Image:
+        """Submit a request to change image visibility to public or restricted.
+
+        Args:
+        Required parameters:
+            image: image to update (Image instance or image ID)
+            prefer_public: Whether to make the image publicly accessible
+            justification: Reason for requesting the visibility change
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> api.images.request_public(image=img, prefer_public=True, justification='')
+        """
+        ...
+
+    def request_allowlist_change(
+        self,
+        *,
+        image: Image | PrimaryKey,
+        justification: str,
+        allowed_orgs_request_text: str,
+    ) -> Image:
+        """Submit a request to change the allowlist for an image.
+
+        Args:
+        Required parameters:
+            image: image to update (Image instance or image ID)
+            justification: Reason for requesting the allowlist change
+            allowed_orgs_request_text: Free-text description of orgs to allowlist
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> api.images.request_allowlist_change(
+            ...     image=image,
+            ...     justification='Add partner orgs',
+            ...     allowed_orgs_request_text='org-a, org-b',
+            ... )
+        """
+        ...
+
+    def cancel_publish_access_record(
+        self,
+        *,
+        image: Image | PrimaryKey,
+    ) -> Image:
+        """Cancel the active publish access record for an image.
+
+        Args:
+        Required parameters:
+            image: image to cancel the record for (Image instance or image ID)
+
+        Returns:
+            Image: the image instance
+
+        Example:
+            >>> api.images.cancel_publish_access_record(image=image)
         """
         ...
 
