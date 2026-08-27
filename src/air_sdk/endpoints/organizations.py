@@ -30,6 +30,8 @@ class Organization(OrganizationCompatMixin, AirModel):
     image_storage: int = field(repr=False)
     userconfigs: int = field(repr=False)
     usage: ResourceBudgetUsage = field(repr=False)
+    total_compute_hours: float | None = field(default=None, repr=False)
+    remaining_compute_hours: float | None = field(default=None, repr=False)
 
     @property
     def name(self) -> str:

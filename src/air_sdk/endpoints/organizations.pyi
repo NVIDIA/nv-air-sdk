@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES.
 # All rights reserved.
 # SPDX-License-Identifier: MIT
 
@@ -34,6 +34,13 @@ class Organization(AirModel):
         image_storage: Image storage allocated, in GB
         userconfigs: Total UserConfig content allocated, in bytes
         usage: Current resource usage
+        total_compute_hours: Total compute hours the organization has been granted,
+            including the compute hours it has already consumed. Grants which were
+            voided or which have expired are not counted. `None` when the Air
+            deployment predates this field.
+        remaining_compute_hours: Semi-reliable cached estimate of the compute hours
+            the organization has left to spend out of `total_compute_hours`. `None`
+            when the Air deployment predates this field.
     """
 
     id: str
@@ -50,6 +57,8 @@ class Organization(AirModel):
     image_storage: int
     userconfigs: int
     usage: ResourceBudgetUsage
+    total_compute_hours: float | None
+    remaining_compute_hours: float | None
 
     @property
     def name(self) -> str:

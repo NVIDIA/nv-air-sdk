@@ -259,10 +259,34 @@ def type_check_typed_dict(value: Any, expected_type: Type[Any]) -> bool:
     )
 
 
+# ``ForwardRef._evaluate`` is a private CPython API whose signature drifted in
+# Python 3.13: ``recursive_guard`` became keyword-only and a ``type_params``
+# parameter was added. Detect the extra parameter once at import time rather than
+# on every forward-reference resolution.
+_FORWARD_REF_EVALUATE_HAS_TYPE_PARAMS = (
+    'type_params' in inspect.signature(ForwardRef._evaluate).parameters
+)
+
+
+def _evaluate_forward_ref(ref: ForwardRef) -> Any:
+    """Resolve a ``ForwardRef`` in a way that works across Python versions.
+
+    Passing ``recursive_guard`` positionally (as older code did) raises
+    ``TypeError`` on Python 3.13, which surfaces to users as a spurious
+    ``UserWarning`` and silently skips type validation. Pass it by keyword
+    (valid on 3.10-3.13) and supply ``type_params`` only when the running
+    interpreter expects it (see ``_FORWARD_REF_EVALUATE_HAS_TYPE_PARAMS``).
+    """
+    kwargs: dict[str, Any] = {'recursive_guard': frozenset()}
+    if _FORWARD_REF_EVALUATE_HAS_TYPE_PARAMS:
+        kwargs['type_params'] = ()
+    return ref._evaluate(globals(), locals(), **kwargs)
+
+
 def type_check(value: Any, expected_type: Type[Any]) -> bool:
     """Recursively check if the value matches the expected type."""
     if isinstance(expected_type, ForwardRef):
-        expected_type = expected_type._evaluate(globals(), locals(), frozenset())
+        expected_type = _evaluate_forward_ref(expected_type)
 
     origin = get_origin(expected_type)
     args = get_args(expected_type)

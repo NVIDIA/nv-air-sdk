@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.7.0] - 2026-08-27
+- Added compute hour balances to `Organization` / `ResourceBudget`. `total_compute_hours` reports the compute hours the organization has been granted (including hours already consumed, and excluding voided or expired grants), and `remaining_compute_hours` reports a cached estimate of the compute hours it has left to spend. Both are read-only and are `None` when read from an Air deployment that does not yet report them.
+
 # [1.6.1] - 2026-08-09
 - Fixed `Node.management_ip` / `Node.management_mac` returning `None` on nodes whose only management interface is not named `eth0` - most visibly `oob-mgmt-server`, which manages over `eth1`. The deprecated aliases now fall back to the node's sole management interface, restoring the pre-1.6.0 value. Nodes with several management interfaces and no `eth0` still return `None`; read `management_interfaces` for those. Assignment is unchanged and still raises, since a flat write always targets `eth0`.
 

@@ -40,7 +40,11 @@ class Simulation(AirModel):
         enable_dhcp: Whether DHCP is enabled on the OOB server (when OOB is enabled)
         sleep_at: When the simulation should be automatically put to sleep (stored)
         expires_at: When the simulation should be automatically deleted
-        documentation: Documentation markdown or URL to documentation markdown
+        documentation: Read-only markdown documentation associated with the
+            simulation, if any. Only populated for simulations provisioned from
+            a marketplace demo, sharing the same content as the demo. It cannot
+            be set on the simulation -- edit the marketplace demo's
+            documentation instead.
         complete_checkpoint_count: Number of complete checkpoints in the simulation
         metadata: Custom metadata as a JSON string
     """
@@ -90,7 +94,6 @@ class Simulation(AirModel):
         name: str | _MISSING_TYPE = ...,
         sleep_at: datetime | None | _MISSING_TYPE = ...,
         expires_at: datetime | None | _MISSING_TYPE = ...,
-        documentation: str | None | _MISSING_TYPE = ...,
         metadata: str | None | _MISSING_TYPE = ...,
     ) -> None:
         """Update the simulation's properties.
@@ -98,15 +101,16 @@ class Simulation(AirModel):
         Note: For OOB and DHCP configuration, use dedicated methods like
         enable_auto_oob(), disable_auto_oob(), etc.
 
+        Note: `documentation` is read-only and cannot be updated here.
+
         Args:
             name: New name for the simulation
             sleep_at: When the simulation should be automatically put to sleep
             expires_at: When the simulation should be automatically deleted
-            documentation: Documentation markdown or URL to documentation markdown
             metadata: Custom metadata as a JSON string
 
         Example:
-            >>> simulation.update(name='New Name', documentation='https://docs.example.com')
+            >>> simulation.update(name='New Name')
             >>> simulation.update(metadata='{"env": "production", "version": "1.0"}')
         """
         ...
@@ -655,7 +659,6 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         name: str,
         sleep_at: datetime | None = ...,
         expires_at: datetime | None = ...,
-        documentation: str | None = ...,
         metadata: str | None = ...,
     ) -> Simulation:
         # fmt: off
@@ -665,7 +668,6 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             name: Name for the new simulation
             sleep_at: When the simulation should be automatically put to sleep
             expires_at: When the simulation should be automatically deleted
-            documentation: Documentation/description for the simulation
             metadata: Custom metadata as a JSON string
             
         Returns:
@@ -675,13 +677,12 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             # Simple creation:
             >>> simulation = api.simulations.create(name='My Simulation')
 
-            # With expiration and documentation:
+            # With expiration:
             >>> from datetime import datetime, timedelta, timezone
             >>> expires = datetime.now(timezone.utc) + timedelta(days=7)
             >>> simulation = api.simulations.create(
             ...     name='My Simulation',
-            ...     expires_at=expires,
-            ...     documentation='Test simulation'
+            ...     expires_at=expires
             ... )
 
             # With metadata:
@@ -959,18 +960,18 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         name: str | _MISSING_TYPE = ...,
         sleep_at: datetime | None | _MISSING_TYPE = ...,
         expires_at: datetime | None | _MISSING_TYPE = ...,
-        documentation: str | None | _MISSING_TYPE = ...,
         metadata: str | None | _MISSING_TYPE = ...,
     ) -> Simulation:
         # fmt: off
         """Update a simulation's properties.
+
+        Note: `documentation` is read-only and cannot be updated here.
 
         Args:
             simulation: The simulation to update (Simulation object or ID)
             name: New name for the simulation
             sleep_at: When the simulation should be automatically put to sleep
             expires_at: When the simulation should be automatically deleted
-            documentation: Documentation/description for the simulation
             metadata: Custom metadata as a JSON string
 
         Returns:
@@ -985,8 +986,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             # Using simulation ID:
             >>> updated_sim = api.simulations.update(
             ...     simulation='sim-123-abc',
-            ...     name='Updated Name',
-            ...     documentation='New docs'
+            ...     name='Updated Name'
             ... )
 
             # With metadata:
