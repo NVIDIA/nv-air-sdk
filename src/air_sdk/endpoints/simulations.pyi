@@ -14,7 +14,7 @@ from typing import Any, Iterator, List, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.endpoints.checkpoints import CheckpointEndpointAPI
-from air_sdk.endpoints.history import History
+from air_sdk.endpoints.history import History, HistoryModelMixin
 from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
 from air_sdk.endpoints.links import LinkEndpointAPI
 from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
@@ -24,7 +24,7 @@ from air_sdk.endpoints.ztp_scripts import ZTPScript
 from air_sdk.types import NodeAssignmentDataV3, NodeRebuildPayload, NodeResetPayload
 
 @dataclass(eq=False)
-class Simulation(AirModel):
+class Simulation(HistoryModelMixin, AirModel):
     """Simulation model representing a network simulation.
 
     The string representation shows: id, name, state, creator
@@ -213,7 +213,7 @@ class Simulation(AirModel):
 
         Args:
             target_states: Single state or list of states to wait for
-            timeout: Maximum time to wait (default: 120 seconds)
+            timeout: Maximum time to wait (default: 10 minutes)
             poll_interval: Time between status checks (default: 2 seconds)
             error_states: Single state or list of states that should raise an error
 
@@ -411,7 +411,13 @@ class Simulation(AirModel):
             'actor', 'category', 'created', 'model', 'object_id', 'description'
         ] = ...,
     ) -> Iterator[History]:
-        """Get the historical entries for the simulation.
+        """Get the simulation's history from the legacy flat endpoint.
+
+        .. deprecated::
+            Use :meth:`list_history` instead, which reads the simulation's own
+            nested history endpoint and yields ``HistoryEntry`` dicts exposing
+            ``severity``/``labels``. This method queries the legacy flat
+            ``histories`` endpoint and emits a ``DeprecationWarning``.
 
         Args:
             category: Filter by category of the history entries
@@ -423,12 +429,7 @@ class Simulation(AirModel):
             Iterator of History objects for the simulation
 
         Example:
-            # Basic usage with ordering:
             >>> for history in simulation.get_history(ordering='created'):
-            ...     print(history.description)
-
-            # Search and filter:
-            >>> for history in simulation.get_history(search='OOB', ordering='category'):
             ...     print(history.description)
         """
         ...
@@ -715,7 +716,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             attempt_start: When enabled, waits for the simulation creation to
                            complete and then starts it automatically
             start_timeout: Maximum time to wait for simulation creation
-                           (default: 120 seconds)
+                           (default: 10 minutes)
             
         Returns:
             The imported Simulation instance
@@ -740,7 +741,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             ...     content={'nodes': [...]},
             ...     name='My Sim',
             ...     attempt_start=True,
-            ...     start_timeout=300
+            ...     start_timeout=timedelta(minutes=5)
             ... )
         """
         ...
@@ -768,7 +769,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             attempt_start: When enabled, waits for the simulation creation to
                            complete and then starts it automatically
             start_timeout: Maximum time to wait for simulation creation
-                           (default: 120 seconds)
+                           (default: 10 minutes)
 
         Returns:
             The created Simulation instance
@@ -803,7 +804,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             >>> simulation = api.simulations.import_from_simulation_manifest(
             ...     simulation_manifest=simulation_manifest,
             ...     attempt_start=True,
-            ...     start_timeout=300
+            ...     start_timeout=timedelta(minutes=5)
             ... )
 
             # From JSON file:
@@ -840,7 +841,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             attempt_start: When enabled, waits for the simulation creation to
                            complete and then starts it automatically
             start_timeout: Maximum time to wait for simulation creation
-                           (default: 120 seconds)
+                           (default: 10 minutes)
 
         Returns:
             The created Simulation instance
@@ -874,7 +875,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             ...     topology_data=dot_content,
             ...     name='My Simulation',
             ...     attempt_start=True,
-            ...     start_timeout=300
+            ...     start_timeout=timedelta(minutes=5)
             ... )
 
             # From DOT file path:

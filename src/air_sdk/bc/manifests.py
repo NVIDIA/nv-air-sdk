@@ -15,7 +15,7 @@ from air_sdk.bc.base import AirModelCompatMixin, BaseEndpointAPICompatMixin
 from air_sdk.bc.utils import drop_removed_fields, map_field_names
 
 if TYPE_CHECKING:
-    from air_sdk.endpoints.manifests import Manifest
+    from air_sdk.endpoints.plugin_image_manifests import PluginImageManifest as Manifest
 
 
 class ManifestCompatMixin(AirModelCompatMixin):

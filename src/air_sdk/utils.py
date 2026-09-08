@@ -27,6 +27,10 @@ from uuid import UUID, uuid4
 
 from requests import Response
 
+from air_sdk.const import (
+    DEFAULT_WAIT_FOR_STATE_POLL_INTERVAL,
+    DEFAULT_WAIT_FOR_STATE_TIMEOUT,
+)
 from air_sdk.exceptions import AirUnexpectedResponse
 from air_sdk.types import type_check
 
@@ -385,7 +389,7 @@ def wait_for_state(
         target_states: Single state or list of states to wait for
         state_field: Name of the field containing the state (default: 'state').
                     Use 'upload_status' for Images, 'state' for most other models.
-        timeout: Maximum time to wait (default: 120 seconds)
+        timeout: Maximum time to wait (default: 10 minutes)
         poll_interval: Time between status checks (default: 2 seconds)
         error_states: Single state or list of states that should raise an error.
                      If None, no error states are checked.
@@ -407,9 +411,9 @@ def wait_for_state(
     """
     # Set defaults
     if timeout is None:
-        timeout = timedelta(seconds=120)
+        timeout = DEFAULT_WAIT_FOR_STATE_TIMEOUT
     if poll_interval is None:
-        poll_interval = timedelta(seconds=2)
+        poll_interval = DEFAULT_WAIT_FOR_STATE_POLL_INTERVAL
 
     # Normalize to lists
     if isinstance(target_states, str):

@@ -13,6 +13,7 @@ from typing import Any, Iterator, Literal, TypedDict
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc.cloud_init import CloudInit
 from air_sdk.endpoints import UserConfig
+from air_sdk.endpoints.history import HistoryModelMixin
 from air_sdk.endpoints.images import Image
 from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
 from air_sdk.endpoints.links import LinkEndpointAPI
@@ -88,7 +89,7 @@ class CloudInitAssignment(TypedDict):
     meta_data: UserConfig | None
 
 @dataclass(eq=False)
-class Node(AirModel):
+class Node(HistoryModelMixin, AirModel):
     """Node model representing a network node.
 
     Attributes:

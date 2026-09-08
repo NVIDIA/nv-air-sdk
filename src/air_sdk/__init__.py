@@ -31,6 +31,9 @@ __all__ = [
     'DockerRunParameters',
     'DockerRunTmpfsParameter',
     'EmulationParams',
+    'OSImageCapabilities',
+    'OSImageManifestPlatform',
+    'OSImageManifestSpec',
     'Platform',
     'ResourceBudgetUsage',
     'Resources',
@@ -39,6 +42,14 @@ __all__ = [
     # endpoints
     'Checkpoint',
     'CheckpointEndpointAPI',
+    'OSImageManifest',
+    'OSImageManifestEndpointAPI',
+    'OSTemplate',
+    'OSTemplateEndpointAPI',
+    'PlatformInformation',
+    'PlatformInformationEndpointAPI',
+    'PluginImageManifest',
+    'PluginImageManifestEndpointAPI',
     'ServiceAPI',
     'ServiceEndpointApi',
     'NodeApi',
@@ -87,6 +98,9 @@ from air_sdk.types import (
     DockerRunParameters,
     DockerRunTmpfsParameter,
     EmulationParams,
+    OSImageCapabilities,
+    OSImageManifestPlatform,
+    OSImageManifestSpec,
     Platform,
     ResourceBudgetUsage,
     Resources,
@@ -105,7 +119,6 @@ if TYPE_CHECKING:
         ImageShareEndpointAPI,
         InterfaceEndpointAPI,
         LinkEndpointAPI,
-        ManifestEndpointAPI,
         MarketplaceDemoEndpointAPI,
         MarketplaceDemoPublishAccessRecord,
         MarketplaceDemoPublishAccessRecordEndpointAPI,
@@ -113,6 +126,10 @@ if TYPE_CHECKING:
         NodeEndpointAPI,
         NodeInstructionEndpointAPI,
         OrganizationEndpointAPI,
+        OSImageManifestEndpointAPI,
+        OSTemplateEndpointAPI,
+        PlatformInformationEndpointAPI,
+        PluginImageManifestEndpointAPI,
         ServiceEndpointAPI,
         SimulationEndpointAPI,
         SSHKeyEndpointAPI,
@@ -369,10 +386,37 @@ class AirApi:
         return TrainingEndpointAPI(self)
 
     @property
-    def manifests(self) -> ManifestEndpointAPI:
-        from .endpoints import ManifestEndpointAPI
+    def plugin_image_manifests(self) -> PluginImageManifestEndpointAPI:
+        from .endpoints import PluginImageManifestEndpointAPI
 
-        return ManifestEndpointAPI(self)
+        return PluginImageManifestEndpointAPI(self)
+
+    @property
+    @deprecated(
+        'AirApi.manifests is deprecated, use AirApi.plugin_image_manifests instead. '
+        'Requests now target `manifests/plugin-images` rather than the legacy '
+        '`manifests` route.'
+    )
+    def manifests(self) -> PluginImageManifestEndpointAPI:
+        return self.plugin_image_manifests
+
+    @property
+    def os_image_manifests(self) -> OSImageManifestEndpointAPI:
+        from .endpoints import OSImageManifestEndpointAPI
+
+        return OSImageManifestEndpointAPI(self)
+
+    @property
+    def os_templates(self) -> OSTemplateEndpointAPI:
+        from .endpoints import OSTemplateEndpointAPI
+
+        return OSTemplateEndpointAPI(self)
+
+    @property
+    def platform_information(self) -> PlatformInformationEndpointAPI:
+        from .endpoints import PlatformInformationEndpointAPI
+
+        return PlatformInformationEndpointAPI(self)
 
     @property
     @deprecated(
@@ -525,6 +569,14 @@ from air_sdk.endpoints import (  # noqa: E402
     NodeEndpointAPI,
     Organization,
     OrganizationEndpointAPI,
+    OSImageManifest,
+    OSImageManifestEndpointAPI,
+    OSTemplate,
+    OSTemplateEndpointAPI,
+    PlatformInformation,
+    PlatformInformationEndpointAPI,
+    PluginImageManifest,
+    PluginImageManifestEndpointAPI,
     ResourceBudget,  # alias for Organization
     ResourceBudgetEndpointAPI,  # alias for OrganizationEndpointAPI
     ServiceEndpointAPI,

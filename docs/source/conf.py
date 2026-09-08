@@ -32,6 +32,7 @@ autoapi_file_patterns = ['*.pyi', '*.py']
 autoapi_root = 'api'
 autoapi_ignore = [
     '**/bc/*',
+    '**/endpoints/manifests.py',  # compat shim, see bc/README.md
     '**/v2/*',
     '**/air_model.py',
     '**/air_json_encoder.py',

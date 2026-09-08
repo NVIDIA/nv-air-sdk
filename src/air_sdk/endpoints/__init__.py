@@ -36,7 +36,8 @@ __all__ = [
     'InterfaceEndpointAPI',
     'Link',
     'LinkEndpointAPI',
-    'ManifestEndpointAPI',
+    'PluginImageManifestEndpointAPI',
+    'ManifestEndpointAPI',  # BC alias for PluginImageManifestEndpointAPI
     'SimulationApi',  # BC alias for v1
     'SimulationEndpointApi',  # BC alias for v2
     'SimulationNodeApi',  # BC alias for v1
@@ -70,7 +71,8 @@ __all__ = [
     'History',
     'Image',
     'ImageShare',
-    'Manifest',
+    'PluginImageManifest',
+    'Manifest',  # BC alias for PluginImageManifest
     'Node',
     'NodeInstruction',
     'Service',
@@ -85,6 +87,12 @@ __all__ = [
     'MarketplaceDemoTag',
     'Organization',
     'OrganizationEndpointAPI',
+    'OSImageManifest',
+    'OSImageManifestEndpointAPI',
+    'OSTemplate',
+    'OSTemplateEndpointAPI',
+    'PlatformInformation',
+    'PlatformInformationEndpointAPI',
     'ResourceBudget',
     'ResourceBudgetEndpointAPI',
 ]
@@ -106,7 +114,6 @@ from air_sdk.endpoints.images import (
 )
 from air_sdk.endpoints.interfaces import Interface, InterfaceEndpointAPI
 from air_sdk.endpoints.links import Link, LinkEndpointAPI
-from air_sdk.endpoints.manifests import Manifest, ManifestEndpointAPI
 from air_sdk.endpoints.marketplace_demo_publish_access_records import (
     MarketplaceDemoPublishAccessRecord,
     MarketplaceDemoPublishAccessRecordEndpointAPI,
@@ -127,6 +134,19 @@ from air_sdk.endpoints.nodes import Node, NodeEndpointAPI
 from air_sdk.endpoints.organizations import (
     Organization,
     OrganizationEndpointAPI,
+)
+from air_sdk.endpoints.os_image_manifests import (
+    OSImageManifest,
+    OSImageManifestEndpointAPI,
+)
+from air_sdk.endpoints.os_templates import OSTemplate, OSTemplateEndpointAPI
+from air_sdk.endpoints.platform_information import (
+    PlatformInformation,
+    PlatformInformationEndpointAPI,
+)
+from air_sdk.endpoints.plugin_image_manifests import (
+    PluginImageManifest,
+    PluginImageManifestEndpointAPI,
 )
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation, SimulationEndpointAPI
@@ -162,3 +182,5 @@ UserConfigAPI = UserConfigEndpointAPI  # v1
 UserConfigEndpointApi = UserConfigEndpointAPI  # v2
 ResourceBudget = Organization  # alias
 ResourceBudgetEndpointAPI = OrganizationEndpointAPI  # alias
+Manifest = PluginImageManifest  # alias
+ManifestEndpointAPI = PluginImageManifestEndpointAPI  # alias

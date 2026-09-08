@@ -22,9 +22,14 @@ from air_sdk.bc import (
     SimulationCompatMixin,
     SimulationEndpointAPICompatMixin,
 )
-from air_sdk.const import TopologyFormat
+from air_sdk.bc.decorators import deprecated
+from air_sdk.const import (
+    DEFAULT_WAIT_FOR_STATE_POLL_INTERVAL,
+    DEFAULT_WAIT_FOR_STATE_TIMEOUT,
+    TopologyFormat,
+)
 from air_sdk.endpoints import mixins
-from air_sdk.endpoints.history import History
+from air_sdk.endpoints.history import History, HistoryModelMixin
 from air_sdk.exceptions import AirUnexpectedResponse
 from air_sdk.utils import (
     join_urls,
@@ -44,7 +49,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(eq=False)
-class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
+class Simulation(HistoryModelMixin, BaseCompatMixin, SimulationCompatMixin, AirModel):
     id: str = field(repr=False)
     name: str
     created: datetime = field(repr=False)
@@ -151,6 +156,10 @@ class Simulation(BaseCompatMixin, SimulationCompatMixin, AirModel):
             # Re-raise other errors (500, 403, None, etc.) as they indicate real problems
             raise
 
+    @deprecated(
+        'get_history() is deprecated and may be removed in the future. '
+        'Use list_history() instead.'
+    )
     def get_history(self, **kwargs: Any) -> Iterator[History]:
         return self.__api__.histories.list(
             model='simulation', object_id=self.id, **kwargs
@@ -342,14 +351,14 @@ class SimulationEndpointAPI(
     def _wait_and_start_simulation(
         self,
         simulation: Simulation,
-        timeout: timedelta = timedelta(seconds=120),
-        poll_interval: timedelta = timedelta(seconds=2),
+        timeout: timedelta = DEFAULT_WAIT_FOR_STATE_TIMEOUT,
+        poll_interval: timedelta = DEFAULT_WAIT_FOR_STATE_POLL_INTERVAL,
     ) -> None:
         """Wait for simulation to be ready and then start it.
 
         Args:
             simulation: The simulation to wait for and start
-            timeout: Maximum time to wait (default: 120 seconds)
+            timeout: Maximum time to wait (default: 10 minutes)
             poll_interval: Time between status checks (default: 2 seconds)
 
         Raises:

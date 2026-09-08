@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Iterator, List, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
+from air_sdk.endpoints.history import HistoryModelMixin
+from air_sdk.types import OSImageManifestSpec
 
 @dataclass
 class MinimumResources:
@@ -40,7 +42,7 @@ class ImageShare(AirModel):
     def model_api(self) -> ImageShareEndpointAPI: ...
 
 @dataclass(eq=False)
-class Image(AirModel):
+class Image(HistoryModelMixin, AirModel):
     """Image model representing a network image.
 
     Attributes:
@@ -150,6 +152,8 @@ class Image(AirModel):
         filepath: str | Path,
         timeout: timedelta | None = ...,
         max_workers: int = ...,
+        os_image_manifest: OSImageManifestSpec | None = ...,
+        validation_timeout: timedelta = ...,
     ) -> Image:
         """Upload the image to the Air platform.
 
@@ -161,13 +165,37 @@ class Image(AirModel):
             timeout: Timeout per part upload (default: DEFAULT_UPLOAD_TIMEOUT).
             max_workers: number of concurrent workers for parallel uploads
                 (default: 1 for sequential).
+            os_image_manifest: Optionally create the image's OS image manifest
+                once the upload completes.
+            validation_timeout: How long to wait for `VALIDATING` → `COMPLETE`
+                before creating the manifest (default: 10 minutes). Only used
+                when `os_image_manifest` is provided. Independent of `timeout`.
 
         Returns:
             Image: the uploaded image instance
 
+        Note:
+            The API refuses to create a manifest until the image is `COMPLETE`,
+            so passing `os_image_manifest` polls the image through `VALIDATING`
+            first. If the manifest step fails, the uploaded image is kept - fix
+            the payload and retry with `api.os_image_manifests.create()`.
+
         Example
         -------
             >>> image.upload(filepath='local_file_path')
+
+            >>> image.upload(
+            ...     filepath='cumulus-vx-5.16.qcow2',
+            ...     os_image_manifest={
+            ...         'os_type': 'cumulus',
+            ...         'platforms': {
+            ...             'SN4280': {
+            ...                 'platform_information_version': '1',
+            ...                 'os_template_version': '1',
+            ...             }
+            ...         },
+            ...     },
+            ... )
         """
         ...
 
@@ -377,6 +405,8 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         filepath: str | Path = ...,
         timeout: timedelta | None = ...,
         max_workers: int = ...,
+        os_image_manifest: OSImageManifestSpec | None = ...,
+        validation_timeout: timedelta = ...,
     ) -> Image:
         """Create a new image.
 
@@ -397,9 +427,19 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
                 Only used if filepath is provided.
             max_workers: Number of concurrent workers for parallel uploads
                 (default: 1). Only used if filepath is provided.
+            os_image_manifest: Optionally create the image's OS image manifest
+                once the upload completes. Requires `filepath`, since a
+                manifest may only reference an image that reached `COMPLETE`.
+            validation_timeout: How long to wait for `VALIDATING` → `COMPLETE`
+                before creating the manifest (default: 10 minutes). Only used
+                when `os_image_manifest` is provided. Independent of `timeout`.
 
         Returns:
             The created Image instance
+
+        Raises:
+            ValueError: If `os_image_manifest` is given without `filepath`, or
+                carries an `image` key
 
         Example
         -------
@@ -418,6 +458,24 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
             ...     default_username='user',
             ...     default_password='password',
             ...     filepath='./cumulus-vx.qcow2',
+            ... )
+
+            >>> # Create, upload, and attach the OS image manifest in one call
+            >>> api.images.create(
+            ...     name='cumulus-vx-1.2.3',
+            ...     version='1.0.0',
+            ...     default_username='user',
+            ...     default_password='password',
+            ...     filepath='./cumulus-vx.qcow2',
+            ...     os_image_manifest={
+            ...         'os_type': 'cumulus',
+            ...         'platforms': {
+            ...             'SN4280': {
+            ...                 'platform_information_version': '1',
+            ...                 'os_template_version': '1',
+            ...             }
+            ...         },
+            ...     },
             ... )
 
             >>> # Create and upload with parallel workers
@@ -523,6 +581,8 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         filepath: str | Path,
         timeout: timedelta | None = ...,
         max_workers: int = ...,
+        os_image_manifest: OSImageManifestSpec | None = ...,
+        validation_timeout: timedelta = ...,
     ) -> Image:
         """Upload the image to the Air platform.
 
@@ -536,14 +596,31 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
                 This timeout applies to EACH part upload (not total operation).
             max_workers: Number of concurrent workers for uploads.
                 Default: 1 (sequential uploads). Set > 1 for parallel uploads.
+            os_image_manifest: Optionally create the image's OS image manifest
+                once the upload completes.
+            validation_timeout: How long to wait for `VALIDATING` → `COMPLETE`
+                before creating the manifest (default: 10 minutes). Only used
+                when `os_image_manifest` is provided. Independent of `timeout`.
 
         Returns:
             Updated Image instance
 
+        Note:
+            An OS image manifest may only reference an image whose
+            `upload_status` is `COMPLETE`, and an image sits in `VALIDATING`
+            for a while after its parts land. Passing `os_image_manifest`
+            therefore polls until the image completes before creating the
+            manifest. If that step fails the uploaded image is kept, so fix the
+            payload and retry with `api.os_image_manifests.create()` rather
+            than re-uploading.
+
         Raises:
             FileNotFoundError: If the file does not exist
-            ValueError: If filepath is not a regular file or max_workers < 1
+            ValueError: If filepath is not a regular file, max_workers < 1, or
+                `os_image_manifest` carries an `image` key
             PermissionError: If the file is not readable
+            TimeoutError: If `os_image_manifest` was given and the image did not
+                reach `COMPLETE` within `validation_timeout`
             AirUnexpectedResponse: If upload fails or backend returns invalid data
             requests.RequestException: For network/HTTP errors
 
@@ -554,6 +631,21 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
 
             >>> # Large file with parallel upload
             >>> image.upload(filepath='large.qcow2', max_workers=4)
+
+            >>> # Upload and attach the OS image manifest in one call
+            >>> api.images.upload(
+            ...     image='image-uuid',
+            ...     filepath='cumulus-vx-5.16.qcow2',
+            ...     os_image_manifest={
+            ...         'os_type': 'cumulus',
+            ...         'platforms': {
+            ...             'SN4280': {
+            ...                 'platform_information_version': '1',
+            ...                 'os_template_version': '1',
+            ...             }
+            ...         },
+            ...     },
+            ... )
         """
         ...
 

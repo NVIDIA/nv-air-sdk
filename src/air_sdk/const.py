@@ -34,6 +34,14 @@ MULTIPART_MIN_PART_SIZE = 5 * 1024 * 1024  # 5 MiB in bytes
 MAX_RECOMMENDED_UPLOAD_WORKERS = 10
 # Default timeout per part upload
 DEFAULT_UPLOAD_TIMEOUT = timedelta(minutes=5)
+# How long to wait for an uploaded image to leave VALIDATING and reach COMPLETE.
+DEFAULT_IMAGE_VALIDATION_TIMEOUT = timedelta(minutes=10)
+DEFAULT_IMAGE_VALIDATION_POLL_INTERVAL = timedelta(seconds=5)
+
+# State polling configuration (utils.wait_for_state)
+# The timeout is only an upper bound - waiting ends as soon as the target state is reached
+DEFAULT_WAIT_FOR_STATE_TIMEOUT = timedelta(minutes=10)
+DEFAULT_WAIT_FOR_STATE_POLL_INTERVAL = timedelta(seconds=2)
 
 
 class HTTPHeaders(str, Enum):

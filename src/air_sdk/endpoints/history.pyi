@@ -1,20 +1,22 @@
-# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-FileCopyrightText: Copyright (c) 2025-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
 # SPDX-License-Identifier: MIT
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Iterator
+from typing import Iterator, Literal
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI
 from air_sdk.endpoints import mixins
+from air_sdk.types import HistoryEntry, HistoryFilters
 
 @dataclass(eq=False)
 class History(AirModel):
-    """Represents a history entry in the Air API.
+    """A history entry from the legacy flat `histories` endpoint.
 
-    History entries track actions and events for Air resources (simulations, nodes, etc.).
-    They are immutable and read-only - history is created automatically by the Air API.
+    Returned by `api.histories.list()` and the deprecated `Simulation.get_history()`.
+    Entries are immutable and read-only. For per-resource history, prefer the
+    nested `list_history()` (see `HistoryModelMixin`), which yields `HistoryEntry`.
 
     Attributes:
         object_id: ID of the entity this history entry is about (e.g., a simulation ID)
@@ -53,13 +55,86 @@ class History(AirModel):
         """
         ...
 
+class HistoryModelMixin:
+    """Nested history reads for a resource (`history` + `history-filters`).
+
+    Provides the `list_history()` and `get_history_filters()` convenience methods
+    on resources that support per-resource history (`Simulation`, `Node`, `Image`,
+    `MarketplaceDemo`). These read the resource's own nested history endpoints
+    rather than the legacy flat `histories` endpoint.
+    """
+
+    def list_history(
+        self,
+        *,
+        severity: str = ...,
+        actor: str = ...,
+        label: str = ...,
+        search: str = ...,
+        ordering: Literal[
+            'actor', 'severity', 'created', '-actor', '-severity', '-created'
+        ] = ...,
+        limit: int = ...,
+        offset: int = ...,
+    ) -> Iterator[HistoryEntry]:
+        """List the history entries for this resource.
+
+        Reads the resource's nested `history` endpoint and yields read-only
+        `HistoryEntry` dicts (newest-first by default).
+
+        Args:
+            severity: Filter by event severity. Values: 'INFO', 'ERROR'
+            actor: Filter by the actor who performed the action (case-insensitive)
+            label: Only return entries carrying this label (e.g., 'publishing')
+            search: Search for a substring across actor, description, severity,
+                and labels
+            ordering: Order by field. Prefix with '-' for descending order
+                (e.g., '-created')
+            limit: Maximum number of results to return per page
+            offset: Number of results to skip (for pagination)
+
+        Returns:
+            Iterator of HistoryEntry dicts for this resource
+
+        Example:
+            >>> for entry in simulation.list_history(ordering='-created'):
+            ...     print(f'{entry["created"]}: {entry["description"]}')
+
+            >>> # Only publishing-lifecycle entries for an image:
+            >>> for entry in image.list_history(label='publishing'):
+            ...     print(entry['description'])
+        """
+        ...
+
+    def get_history_filters(self) -> HistoryFilters:
+        """Get the distinct history filter values for this resource.
+
+        Returns the distinct actors, severities, and labels present across all of
+        this resource's history entries - the values that populate a filter UI.
+        The options are the same for every caller allowed to read the history.
+
+        Returns:
+            A HistoryFilters mapping with 'actors', 'severities', and 'labels'
+            lists.
+
+        Example:
+            >>> filters = image.get_history_filters()
+            >>> print(filters['actors'])
+            >>> print(filters['labels'])
+        """
+        ...
+
 class HistoryEndpointAPI(mixins.ListApiMixin[History], BaseEndpointAPI[History]):
-    """API for querying history entries.
+    """API for querying simulation and node history entries (legacy flat endpoint).
 
     History entries are read-only records of actions and events for Air resources.
-    Use this endpoint to track changes and audit activity.
 
     Note:
+        This flat endpoint serves **simulation** and **node** history. For image
+        and marketplace-demo history - and as the preferred path for simulations -
+        use the nested `list_history()` / `get_history_filters()` methods on the
+        resource (see `HistoryModelMixin`).
+
         This endpoint only supports list() operations. History entries cannot be
         created, updated, or deleted via the API.
     """
@@ -71,7 +146,7 @@ class HistoryEndpointAPI(mixins.ListApiMixin[History], BaseEndpointAPI[History])
     def list(  # type: ignore[override]
         self,
         *,
-        model: str,
+        model: Literal['simulation', 'node'] = ...,
         object_id: str | None = ...,
         actor: str | None = ...,
         category: str | None = ...,
@@ -80,10 +155,12 @@ class HistoryEndpointAPI(mixins.ListApiMixin[History], BaseEndpointAPI[History])
         limit: int | None = ...,
         offset: int | None = ...,
     ) -> Iterator[History]:
-        """List history entries with optional filtering and pagination.
+        """List simulation and node history entries, with optional filtering and paging.
 
         Args:
-            model: Entity type to get history for (required). Values: 'simulation'
+            model: Entity type to get history for. Accepts 'simulation' or 'node'
+                on this legacy endpoint; image and marketplace-demo history are
+                served by the nested resource endpoints.
             object_id: Filter by the ID of the entity being tracked
                 (e.g., a specific simulation's ID)
             actor: Filter by actor email or identifier
@@ -113,17 +190,6 @@ class HistoryEndpointAPI(mixins.ListApiMixin[History], BaseEndpointAPI[History])
             >>> errors = list(api.histories.list(model='simulation', category='ERROR'))
             >>> print(f'Found {len(errors)} errors')
             >>>
-            >>> # Filter by actor
-            >>> user_actions = list(api.histories.list(
-            ...     model='simulation',
-            ...     actor='user@nvidia.com'
-            ... ))
-            >>> print(f'User performed {len(user_actions)} actions')
-            >>>
-            >>> # Search descriptions
-            >>> for entry in api.histories.list(model='simulation', search='started'):
-            ...     print(entry.description)
-            >>>
             >>> # Order by creation time (newest first)
             >>> for entry in api.histories.list(
             ...     model='simulation',
@@ -131,10 +197,6 @@ class HistoryEndpointAPI(mixins.ListApiMixin[History], BaseEndpointAPI[History])
             ...     limit=5
             ... ):
             ...     print(f'{entry.created}: {entry.description}')
-            >>>
-            >>> # Pagination
-            >>> page_1 = list(api.histories.list(model='simulation', limit=10, offset=0))
-            >>> page_2 = list(api.histories.list(model='simulation', limit=10, offset=10))
         """
         ...
     # fmt: on

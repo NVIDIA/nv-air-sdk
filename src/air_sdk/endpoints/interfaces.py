@@ -47,6 +47,7 @@ class Interface(BaseCompatMixin, InterfaceCompatMixin, AirModel):
     labels: InterfaceLabels | None = field(repr=False)
     interface_role: str | None = field(default=None, repr=False)
     scalable_unit: int | None = field(default=None, repr=False)
+    split: str | None = field(default=None, repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[InterfaceEndpointAPI]:

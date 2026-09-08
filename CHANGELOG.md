@@ -4,6 +4,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.7.1] - 2026-09-02
+- Raised the default `wait_for_state()` timeout from 2 minutes to 10 minutes, so waiting on a slow simulation start or shutdown no longer times out on a healthy simulation. The timeout is only an upper bound - the call still returns as soon as the target state is reached - so this does not slow down fast transitions. Pass `timeout=` for a tighter bound.
+
 # [1.7.0] - 2026-08-27
 - Added compute hour balances to `Organization` / `ResourceBudget`. `total_compute_hours` reports the compute hours the organization has been granted (including hours already consumed, and excluding voided or expired grants), and `remaining_compute_hours` reports a cached estimate of the compute hours it has left to spend. Both are read-only and are `None` when read from an Air deployment that does not yet report them.
 

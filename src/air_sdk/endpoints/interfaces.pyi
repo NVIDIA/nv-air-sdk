@@ -37,6 +37,7 @@ class Interface(AirModel):
         labels: Labels of the interface
         interface_role: The role of the interface
         scalable_unit: The scalable unit number of the interface
+        split: The breakout (split) factor of the interface
     """
 
     id: str
@@ -51,6 +52,7 @@ class Interface(AirModel):
     labels: InterfaceLabels | None
     interface_role: str | None
     scalable_unit: int | None
+    split: str | None
 
     @classmethod
     def get_model_api(cls) -> type[InterfaceEndpointAPI]: ...
@@ -178,6 +180,7 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
         labels: InterfaceLabels | None | _MISSING_TYPE = ...,
         interface_role: str | None | _MISSING_TYPE = ...,
         scalable_unit: int | None | _MISSING_TYPE = ...,
+        split: str | None | _MISSING_TYPE = ...,
     ) -> Interface:
         """Create a new interface.
 
@@ -190,6 +193,11 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
             labels: Labels for the interface
             interface_role: Role of the interface
             scalable_unit: Scalable unit of the interface
+            split: Breakout factor of the physical port this interface
+                belongs to ('1' = un-split, e.g. '2', '4'). Only meaningful
+                for nodes managed by a platform port map, where the
+                `name`/`split` pair must match the port map; when unset, the
+                interface is created at the platform's default split
 
         Returns:
             The created Interface instance
@@ -197,6 +205,9 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
         Example:
             >>> interface = api.interfaces.create(name='eth0', node=node)
             >>> interface = node.interfaces.create(name='eth0', node=node.id)
+            >>>
+            >>> # On a platform-managed node, name/split must match the port map
+            >>> interface = api.interfaces.create(name='swp1s1', node=node, split='2')
 
         """
         ...

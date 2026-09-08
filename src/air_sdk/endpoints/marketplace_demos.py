@@ -15,6 +15,7 @@ from air_sdk.bc import (
     MarketplaceDemoEndpointAPICompatMixin,
 )
 from air_sdk.endpoints import mixins
+from air_sdk.endpoints.history import HistoryModelMixin
 
 # Import Simulation at runtime (not just TYPE_CHECKING) because get_type_hints() needs it
 from air_sdk.endpoints.simulations import Simulation
@@ -23,7 +24,9 @@ from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload
 
 
 @dataclass(eq=False)
-class MarketplaceDemo(BaseCompatMixin, MarketplaceDemoCompatMixin, AirModel):
+class MarketplaceDemo(
+    HistoryModelMixin, BaseCompatMixin, MarketplaceDemoCompatMixin, AirModel
+):
     """Marketplace demo model representing a marketplace demo.
 
     Attributes:

@@ -11,11 +11,12 @@ from datetime import datetime
 from typing import Any, Iterator, List
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
+from air_sdk.endpoints.history import HistoryModelMixin
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.types import DEMO_SIMULATION_STATE, SimRequiredResources
 
 @dataclass(eq=False)
-class MarketplaceDemo(AirModel):
+class MarketplaceDemo(HistoryModelMixin, AirModel):
     """Marketplace demo model representing a marketplace demo.
 
     Attributes:

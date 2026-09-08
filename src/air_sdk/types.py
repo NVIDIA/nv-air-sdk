@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+from datetime import datetime
 from enum import Enum
 from types import UnionType
 from typing import (
@@ -196,6 +197,77 @@ class ResourceBudgetUsage(TypedDict):
     disk_storage: float
     image_storage: int
     userconfigs: int
+
+
+class OSImageManifestPlatform(TypedDict):
+    """Per-model platform information and OS template pins."""
+
+    platform_information_version: str | None
+    os_template_version: str | None
+
+
+class OSImageCapabilities(TypedDict, total=False):
+    """OS image capability flags; key presence means supported."""
+
+    vsock: dict[str, Any]
+
+
+class _OSImageManifestSpecRequired(TypedDict):
+    """Required fields for OSImageManifestSpec."""
+
+    os_type: str
+
+
+class OSImageManifestSpec(_OSImageManifestSpecRequired, total=False):
+    """OS image manifest payload for `api.images.upload()` (no `image`)."""
+
+    platforms: dict[str, OSImageManifestPlatform]
+    capabilities: OSImageCapabilities
+    os_template_partition: str | None
+
+
+class HistoryEntry(TypedDict):
+    """A single history entry from a resource's nested ``history`` endpoint.
+
+    Read-only and immutable - returned by ``list_history()`` on simulations,
+    images, and marketplace demos. This is distinct from the legacy ``History``
+    model returned by the deprecated flat ``histories`` endpoint.
+
+    Attributes:
+        object_id: ID of the entity this entry is about (e.g. a simulation ID)
+        model: Type of entity being tracked (e.g. 'simulation')
+        created: When the entry was recorded
+        actor: Email or identifier of the user who performed the action
+        description: Human-readable description of what happened
+        severity: Event severity. Values: 'INFO', 'ERROR'
+        labels: Backend-assigned labels (e.g. 'publishing'), used for filtering
+    """
+
+    object_id: str
+    model: str
+    created: datetime
+    actor: str
+    description: str
+    severity: str
+    labels: list[str]
+
+
+class HistoryFilters(TypedDict):
+    """Distinct history filter values available for a single resource.
+
+    Returned by the nested ``history-filters`` endpoint on a resource (e.g. a
+    simulation, image, or marketplace demo). The values span all of that
+    resource's history and are intended to populate filter dropdowns.
+
+    Attributes:
+        actors: Distinct actor values present on the resource's history entries
+        severities: Distinct severity values (e.g. 'INFO', 'ERROR')
+        labels: Distinct label values (e.g. 'publishing')
+    """
+
+    actors: list[str]
+    severities: list[str]
+    labels: list[str]
 
 
 class SimRequiredResources(TypedDict):

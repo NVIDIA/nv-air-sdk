@@ -14,14 +14,32 @@ from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc import BaseCompatMixin, ImageCompatMixin
 from air_sdk.bc.image import ImageEndpointAPICompatMixin
 from air_sdk.bc.utils import _caller_stacklevel
-from air_sdk.const import MAX_RECOMMENDED_UPLOAD_WORKERS
+from air_sdk.const import (
+    DEFAULT_IMAGE_VALIDATION_POLL_INTERVAL,
+    DEFAULT_IMAGE_VALIDATION_TIMEOUT,
+    MAX_RECOMMENDED_UPLOAD_WORKERS,
+)
 from air_sdk.endpoints import mixins
+from air_sdk.endpoints.history import HistoryModelMixin
+from air_sdk.exceptions import AirError
 from air_sdk.helpers import image_upload
 from air_sdk.utils import (
     join_urls,
     raise_if_invalid_response,
     validate_payload_types,
+    wait_for_state,
 )
+
+
+def _validate_os_image_manifest_spec(spec: Optional[dict[str, Any]]) -> None:
+    """Reject a manifest spec that collides with the image it is attached to."""
+    if spec is not None and 'image' in spec:
+        raise ValueError(
+            '`os_image_manifest` must not contain an `image` key: the manifest is '
+            'attached to the image being uploaded. Drop `image` from the payload, '
+            'or create the manifest separately with '
+            '`api.os_image_manifests.create(image=<id>, ...)`.'
+        )
 
 
 @dataclass
@@ -60,7 +78,7 @@ class ImageShare(AirModel):
 
 
 @dataclass(eq=False)
-class Image(BaseCompatMixin, ImageCompatMixin, AirModel):
+class Image(HistoryModelMixin, BaseCompatMixin, ImageCompatMixin, AirModel):
     """Image model representing a network image.
 
     Attributes:
@@ -139,6 +157,8 @@ class Image(BaseCompatMixin, ImageCompatMixin, AirModel):
         filepath: str | Path,
         timeout: Optional[timedelta] = None,
         max_workers: int = 1,
+        os_image_manifest: Optional[dict[str, Any]] = None,
+        validation_timeout: timedelta = DEFAULT_IMAGE_VALIDATION_TIMEOUT,
         **kwargs: Any,
     ) -> Image:
         """Upload the image to the Air platform.
@@ -154,6 +174,8 @@ class Image(BaseCompatMixin, ImageCompatMixin, AirModel):
             filepath=filepath,
             timeout=timeout,
             max_workers=max_workers,
+            os_image_manifest=os_image_manifest,
+            validation_timeout=validation_timeout,
             **kwargs,
         )
 
@@ -286,6 +308,22 @@ class ImageEndpointAPI(
         filepath = kwargs.pop('filepath', None)
         timeout = kwargs.pop('timeout', None)
         max_workers = kwargs.pop('max_workers', 1)
+        os_image_manifest = kwargs.pop('os_image_manifest', None)
+        validation_timeout = kwargs.pop(
+            'validation_timeout', DEFAULT_IMAGE_VALIDATION_TIMEOUT
+        )
+
+        if os_image_manifest is not None and filepath is None:
+            raise ValueError(
+                '`os_image_manifest` requires `filepath`: a manifest can only be '
+                'attached once the upload reaches COMPLETE, and without a file '
+                'there is no upload process. Either pass `filepath`, or create the '
+                'manifest separately with `api.os_image_manifests.create()`.'
+            )
+        # `upload_v3()` repeats this check for callers that reach it directly.
+        # Running it here as well keeps a rejected spec from leaving a stray image
+        # record behind, since the create below happens before that upload starts.
+        _validate_os_image_manifest_spec(os_image_manifest)
 
         # Create the image (without upload parameters)
         # Call CreateApiMixin.create() directly to avoid BC layer recursion
@@ -298,6 +336,9 @@ class ImageEndpointAPI(
                 upload_kwargs['timeout'] = timeout
             if max_workers != 1:
                 upload_kwargs['max_workers'] = max_workers
+            if os_image_manifest is not None:
+                upload_kwargs['os_image_manifest'] = os_image_manifest
+            upload_kwargs['validation_timeout'] = validation_timeout
             return self.upload_v3(**upload_kwargs)
         return img
 
@@ -309,6 +350,8 @@ class ImageEndpointAPI(
         filepath: str | Path,
         timeout: Optional[timedelta] = None,
         max_workers: int = 1,
+        os_image_manifest: Optional[dict[str, Any]] = None,
+        validation_timeout: timedelta = DEFAULT_IMAGE_VALIDATION_TIMEOUT,
         **kwargs: Any,
     ) -> Image:
         """Upload the image to the Air platform.
@@ -323,6 +366,8 @@ class ImageEndpointAPI(
             >>> # Large file with parallel upload
             >>> image.upload(filepath='large.qcow2', max_workers=4)
         """
+        _validate_os_image_manifest_spec(os_image_manifest)
+
         # Convert PrimaryKey to Image at the start if needed
         if not isinstance(image, Image):
             image = self.get(image)  # Fetch the full Image object
@@ -348,7 +393,7 @@ class ImageEndpointAPI(
             raise PermissionError(f'File not readable: {filepath}')
 
         # All uploads use multipart upload to S3
-        return image_upload.upload_image(
+        uploaded = image_upload.upload_image(
             api_client=self.__api__,
             base_url=self.url,
             image=image,
@@ -357,6 +402,58 @@ class ImageEndpointAPI(
             max_workers=max_workers,
             **kwargs,
         )
+
+        if os_image_manifest is not None:
+            self._attach_os_image_manifest(
+                uploaded,
+                os_image_manifest,
+                validation_timeout=validation_timeout,
+            )
+        return uploaded
+
+    def _attach_os_image_manifest(
+        self,
+        image: Image,
+        spec: dict[str, Any],
+        *,
+        validation_timeout: timedelta = DEFAULT_IMAGE_VALIDATION_TIMEOUT,
+    ) -> None:
+        """Create the OS image manifest for a freshly uploaded image."""
+        if image.upload_status != 'COMPLETE':
+            try:
+                wait_for_state(
+                    image,
+                    'COMPLETE',
+                    state_field='upload_status',
+                    timeout=validation_timeout,
+                    poll_interval=DEFAULT_IMAGE_VALIDATION_POLL_INTERVAL,
+                    error_states='READY',
+                )
+            except ValueError as exc:
+                raise AirError(
+                    f'Image {image.id} failed validation after upload, so its OS '
+                    f'image manifest was not created. The API discarded the '
+                    f'uploaded file and reset the image to `READY`; re-upload it '
+                    f'before attaching a manifest.'
+                ) from exc
+            except TimeoutError as exc:
+                raise TimeoutError(
+                    f'Image {image.id} uploaded but did not reach `COMPLETE` '
+                    f'within {validation_timeout} (last seen: '
+                    f'`{image.upload_status}`), so its OS image manifest was not '
+                    f'created. The image is retained, once it is complete, run '
+                    f'`api.os_image_manifests.create(image=<id>, ...)`.'
+                ) from exc
+
+        try:
+            self.__api__.os_image_manifests.create(image=image, **spec)
+        except AirError as exc:
+            raise AirError(
+                f'Image {image.id} uploaded successfully, but creating its OS '
+                f'image manifest failed. The image is retained, fix the '
+                f'manifest payload and retry with '
+                f'`api.os_image_manifests.create(image=<id>, ...)`.'
+            ) from exc
 
     @validate_payload_types
     def clear_upload(self, *, image: Image | PrimaryKey, **kwargs: Any) -> Image:

@@ -19,7 +19,7 @@ from typing import (
 )
 
 from air_sdk.air_json_encoder import AirJSONEncoder
-from air_sdk.air_model import DataDict, PrimaryKey, TAirModel, TAirModel_co
+from air_sdk.air_model import DataDict, PrimaryKey, TAirModel_co
 from air_sdk.bc.decorators import deprecated
 from air_sdk.bc.utils import _caller_stacklevel
 from air_sdk.exceptions import AirModelAttributeError
@@ -130,9 +130,13 @@ class ListApiMixin(BaseApiMixin, Generic[TAirModel_co]):
         self,
         url: str,
         params: Dict[str, Any],
-        load_model: Callable[[DataDict], TAirModel],
-    ) -> Iterator[TAirModel]:
-        """Yield model instances across all paginated responses starting at `url`."""
+        load_model: Callable[[DataDict], _T],
+    ) -> Iterator[_T]:
+        """Yield loaded objects across all paginated responses starting at `url`.
+
+        `load_model` turns each raw result dict into an object; it need not be an
+        `AirModel` (e.g. nested history reads load plain `HistoryEntry` dicts).
+        """
         page_url: Optional[str] = url
         next_url: Optional[str] = None
         while page_url or next_url:

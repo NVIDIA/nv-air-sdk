@@ -15,6 +15,7 @@ from air_sdk.bc import (
     NodeEndpointAPICompatMixin,
 )
 from air_sdk.endpoints import mixins
+from air_sdk.endpoints.history import HistoryModelMixin
 from air_sdk.endpoints.images import Image
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
@@ -29,7 +30,7 @@ if TYPE_CHECKING:
 
 
 @dataclass(eq=False)
-class Node(BaseCompatMixin, NodeCompatMixin, AirModel):
+class Node(HistoryModelMixin, BaseCompatMixin, NodeCompatMixin, AirModel):
     id: str
     created: datetime = field(repr=False)
     modified: datetime = field(repr=False)
