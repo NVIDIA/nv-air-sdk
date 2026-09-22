@@ -72,6 +72,25 @@ class SimState(str, Enum):
     REBUILDING = 'REBUILDING'
 
 
+class InstructionExportChoice(str, Enum):
+    """Which instructions to include when exporting a simulation.
+
+    Passed as the ``include_instructions`` parameter to
+    :meth:`Simulation.export`. Use these instead of raw strings for type
+    safety and IDE autocomplete. The name matches the air-api
+    ``InstructionExportChoice`` constant.
+
+    Example:
+        >>> from air_sdk import InstructionExportChoice
+        >>> choice = InstructionExportChoice.REPEATABLE
+        >>> export_data = sim.export(include_instructions=choice)
+    """
+
+    NONE = 'NONE'
+    REPEATABLE = 'REPEATABLE'
+    REPEATABLE_OR_NOT_READY = 'REPEATABLE_OR_NOT_READY'
+
+
 DEMO_SIMULATION_STATE: TypeAlias = Literal['DEMO', 'CLONING', 'INVALID']
 
 

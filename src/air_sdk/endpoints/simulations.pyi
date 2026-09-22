@@ -21,7 +21,12 @@ from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 from air_sdk.endpoints.nodes import NodeEndpointAPI
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.ztp_scripts import ZTPScript
-from air_sdk.types import NodeAssignmentDataV3, NodeRebuildPayload, NodeResetPayload
+from air_sdk.types import (
+    InstructionExportChoice,
+    NodeAssignmentDataV3,
+    NodeRebuildPayload,
+    NodeResetPayload,
+)
 
 @dataclass(eq=False)
 class Simulation(HistoryModelMixin, AirModel):
@@ -341,6 +346,8 @@ class Simulation(HistoryModelMixin, AirModel):
         self,
         *,
         image_ids: bool = ...,
+        include_instructions: InstructionExportChoice | str = ...,
+        include_services: bool = ...,
         topology_format: Literal['JSON'] = 'JSON',
     ) -> dict[str, Any]:
         """Export the simulation.
@@ -348,6 +355,13 @@ class Simulation(HistoryModelMixin, AirModel):
         Args:
             image_ids: Whether to include image IDs in the export.
                       If not specified, the API will use its default behavior.
+            include_instructions: Which node instructions to include in the export.
+                One of the ``InstructionExportChoice`` values -- ``NONE`` (default,
+                omit instructions), ``REPEATABLE`` (only repeatable instructions),
+                or ``REPEATABLE_OR_NOT_READY``. If not specified, the API omits
+                instructions.
+            include_services: Whether to include services (exposed ports) in the
+                export. Defaults to False on the API when not specified.
             topology_format: Format for the topology in the export.
                             If not specified, the API will use its default behavior.
 
@@ -360,6 +374,13 @@ class Simulation(HistoryModelMixin, AirModel):
 
             # Export with specific options:
             >>> export_data = simulation.export(image_ids=True, topology_format='JSON')
+
+            # Export including repeatable instructions and services:
+            >>> from air_sdk import InstructionExportChoice
+            >>> export_data = simulation.export(
+            ...     include_instructions=InstructionExportChoice.REPEATABLE,
+            ...     include_services=True,
+            ... )
         """
         ...
 
@@ -708,9 +729,15 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         # fmt: off
         """Import a simulation from raw data.
         
+        A JSON topology may declare top-level ``services`` and ``instructions``
+        lists (top-level rather than nested, so ``oob-mgmt-server`` can be
+        targeted); when present they are imported alongside the nodes.
+
         Args:
             format: Format of the content ('JSON' or 'DOT')
-            content: The topology content (dict for JSON, str for DOT)
+            content: The topology content (dict for JSON, str for DOT). A JSON
+                     topology may include top-level ``services`` and
+                     ``instructions`` lists in addition to ``nodes``/``links``.
             name: Name for the new simulation
             ztp: Optional ZTP script content
             attempt_start: When enabled, waits for the simulation creation to
@@ -760,7 +787,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         - format: 'JSON'
         - name: Simulation name
         - content: Topology data (for JSON format: dict with 'nodes', 'links',
-          'oob')
+          'oob'; may also declare top-level 'services' and 'instructions' lists)
         - ztp: Optional ZTP script content
 
         Args:
@@ -1004,19 +1031,28 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         *,
         simulation: Simulation | PrimaryKey,
         image_ids: bool = ...,
+        include_instructions: InstructionExportChoice | str = ...,
+        include_services: bool = ...,
         topology_format: Literal['JSON'] = 'JSON',
     ) -> dict[str, Any]:
         # fmt: off
         """Export a simulation.
-        
+
         Args:
             simulation: The simulation to export (Simulation object or simulation ID)
             image_ids: Whether to include image IDs in the export
+            include_instructions: Which node instructions to include in the export.
+                One of the ``InstructionExportChoice`` values -- ``NONE`` (default,
+                omit instructions), ``REPEATABLE`` (only repeatable instructions),
+                or ``REPEATABLE_OR_NOT_READY``. If not specified, the API omits
+                instructions.
+            include_services: Whether to include services (exposed ports) in the
+                export. Defaults to False on the API when not specified.
             topology_format: Format for the topology in the export
-            
+
         Returns:
             Dictionary containing the exported simulation data
-            
+
         Example:
             # Using Simulation object:
             >>> export_data = api.simulations.export(simulation=simulation)
@@ -1027,6 +1063,14 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
             # With optional parameters:
             >>> export_data = api.simulations.export(
             ...     simulation=simulation, image_ids=True, topology_format='JSON'
+            ... )
+
+            # Including repeatable instructions and services:
+            >>> from air_sdk import InstructionExportChoice
+            >>> export_data = api.simulations.export(
+            ...     simulation=simulation,
+            ...     include_instructions=InstructionExportChoice.REPEATABLE,
+            ...     include_services=True,
             ... )
         """
         ...

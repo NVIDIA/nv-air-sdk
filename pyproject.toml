@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "nv-air-sdk"
-version = "1.7.1"
+version = "1.8.0"
 description = "Python SDK for creating, running and managing simulations on NVIDIA Air"
 authors = ["Air Team <air@nvidia.com>"]
 readme = "README.md"
@@ -45,7 +45,7 @@ nbsphinx = "^0.9"
 # Explicit versions of transitive dependencies
 # Versions are bumped in order to resolve CVEs
 nbconvert = "7.17.1"
-mistune = "3.3.2"
+mistune = "3.3.4"
 bleach = "6.4.0"
 pygments = "2.20.0"
 
