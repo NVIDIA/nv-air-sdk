@@ -30,13 +30,14 @@ class PluginImageManifest(BaseCompatMixin, ManifestCompatMixin, AirModel):
     simulator_image: Image = field(metadata=AirModel.FIELD_FOREIGN_KEY, repr=False)
     simulator_resources: dict[str, Any] = field(repr=False)
     artifacts_directory: Optional[str] = field(default=None, repr=False)
-    artifacts_directory_max_size_gb: Optional[int] = field(default=None, repr=False)
+    artifacts_directory_max_size_gb: Optional[float] = field(default=None, repr=False)
     boot_group: Optional[int] = field(default=None, repr=False)
     configure_node_properties: Optional[dict[str, Any]] = field(default=None, repr=False)
     configure_simulator: Optional[dict[str, Any]] = field(default=None, repr=False)
     simulation_engine_versions: Optional[list[str]] = field(default=None, repr=False)
     emulation_params: Optional[dict[str, Any]] = field(default=None, repr=False)
     port_mapping_required: Optional[bool] = field(default=None, repr=False)
+    secrets: Optional[list[dict[str, Any]]] = field(default=None, repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[PluginImageManifestEndpointAPI]:

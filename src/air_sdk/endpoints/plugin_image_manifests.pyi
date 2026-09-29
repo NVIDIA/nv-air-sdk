@@ -17,6 +17,7 @@ from air_sdk.types import (
     DockerRunParameters,
     EmulationParams,
     Platform,
+    PluginManifestSecret,
     Resources,
 )
 
@@ -45,6 +46,7 @@ class PluginImageManifest(AirModel):
         simulation_engine_versions: List of supported sim engine versions (optional)
         emulation_params: Emulation-specific parameters (optional)
         port_mapping_required: Whether port mapping is required (optional, read-only)
+        secrets: Secret file references (optional)
     """
 
     id: str
@@ -56,13 +58,14 @@ class PluginImageManifest(AirModel):
     simulator_resources: dict[str, Any]
     description: str | None
     artifacts_directory: str | None
-    artifacts_directory_max_size_gb: int | None
+    artifacts_directory_max_size_gb: float | None
     boot_group: int | None
     configure_node_properties: dict[str, Any] | None
     configure_simulator: dict[str, Any] | None
     simulation_engine_versions: list[str] | None
     emulation_params: dict[str, Any] | None
     port_mapping_required: bool | None
+    secrets: list[PluginManifestSecret] | None
 
     @classmethod
     def get_model_api(cls) -> type[PluginImageManifestEndpointAPI]:
@@ -92,12 +95,13 @@ class PluginImageManifest(AirModel):
         simulator_resources: Resources | dict[str, Any] = ...,
         description: str = ...,
         artifacts_directory: str = ...,
-        artifacts_directory_max_size_gb: int = ...,
+        artifacts_directory_max_size_gb: float = ...,
         boot_group: int = ...,
         configure_node_properties: dict[str, Any] = ...,
         configure_simulator: dict[str, Any] = ...,
         simulation_engine_versions: list[str] = ...,
         emulation_params: EmulationParams | dict[str, Any] = ...,
+        secrets: list[PluginManifestSecret] = ...,
     ) -> None:
         """Update the manifest's properties.
 
@@ -115,6 +119,7 @@ class PluginImageManifest(AirModel):
             configure_simulator: Simulator configuration
             simulation_engine_versions: Supported engine versions
             emulation_params: Emulation parameters
+            secrets: Secret file references
 
         Example:
             >>> manifest.update(boot_group=2)
@@ -198,12 +203,13 @@ class PluginImageManifestEndpointAPI(BaseEndpointAPI[PluginImageManifest]):
         simulator_resources: Resources | dict[str, Any],
         description: str = ...,
         artifacts_directory: str = ...,
-        artifacts_directory_max_size_gb: int = ...,
+        artifacts_directory_max_size_gb: float = ...,
         boot_group: int = ...,
         configure_node_properties: dict[str, Any] = ...,
         configure_simulator: dict[str, Any] = ...,
         simulation_engine_versions: List[str] = ...,
         emulation_params: EmulationParams | dict[str, Any] = ...,
+        secrets: List[PluginManifestSecret] = ...,
         **kwargs: Any,
     ) -> PluginImageManifest:
         """Create a new manifest.
@@ -224,6 +230,7 @@ class PluginImageManifestEndpointAPI(BaseEndpointAPI[PluginImageManifest]):
             configure_simulator: Simulator configuration (optional)
             simulation_engine_versions: Supported engine versions (optional)
             emulation_params: Emulation parameters (optional)
+            secrets: Secret file references (optional)
             **kwargs: Additional fields
 
         Returns:
@@ -232,7 +239,7 @@ class PluginImageManifestEndpointAPI(BaseEndpointAPI[PluginImageManifest]):
         Example:
             >>> manifest = api.plugin_image_manifests.create(
             ...     artifacts_directory='/artifacts',
-            ...     artifacts_directory_max_size_gb=10,
+            ...     artifacts_directory_max_size_gb=0.5,
             ...     boot_group=1,
             ...     configure_node_properties={},
             ...     configure_simulator={},
@@ -282,12 +289,13 @@ class PluginImageManifestEndpointAPI(BaseEndpointAPI[PluginImageManifest]):
         simulator_resources: Resources | dict[str, Any] = ...,
         description: str = ...,
         artifacts_directory: str = ...,
-        artifacts_directory_max_size_gb: int = ...,
+        artifacts_directory_max_size_gb: float = ...,
         boot_group: int = ...,
         configure_node_properties: dict[str, Any] = ...,
         configure_simulator: dict[str, Any] = ...,
         simulation_engine_versions: List[str] = ...,
         emulation_params: EmulationParams | dict[str, Any] = ...,
+        secrets: List[PluginManifestSecret] = ...,
         **kwargs: Any,
     ) -> PluginImageManifest:
         """Update a manifest's properties.
@@ -307,6 +315,7 @@ class PluginImageManifestEndpointAPI(BaseEndpointAPI[PluginImageManifest]):
             configure_simulator: Simulator configuration
             simulation_engine_versions: Supported engine versions
             emulation_params: Emulation parameters
+            secrets: Secret file references
             **kwargs: Additional fields to update
 
         Returns:

@@ -54,6 +54,7 @@ class Node(HistoryModelMixin, BaseCompatMixin, NodeCompatMixin, AirModel):
     management_interfaces: dict[str, NodeManagementInterfaceInfo] | None = field(
         default=None, repr=False
     )
+    placement_group: str = field(default='', repr=False)
 
     @classmethod
     def get_model_api(cls) -> type[NodeEndpointAPI]:

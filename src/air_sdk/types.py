@@ -158,6 +158,13 @@ class EmulationParams(TypedDict):
     max_network_pci: int
 
 
+class PluginManifestSecret(TypedDict):
+    """A named secret a simulator may request."""
+
+    name: str
+    path: str
+
+
 UserConfigType = Optional[Union['UserConfig', 'PrimaryKey']]
 
 

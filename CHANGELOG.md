@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.9.0] - 2026-09-29
+- Added support for node placement-group.
+- Added placement-group examples for node operations and simulation import/export.
+
 # [1.8.0] - 2026-09-08
 - Added a NOS Manifest API for platform injection: new `os_image_manifests`, `os_templates`, and `platform_information` endpoints, exposed as `api.os_image_manifests`, `api.os_templates`, and `api.platform_information`.
 - Added resource-level history access. `Simulation`, `Node`, `Image`, and `MarketplaceDemo` objects now expose `list_history()` and `get_history_filters()` for reading that specific resource's change history and its available filter values, without going through the top-level `histories` endpoint.

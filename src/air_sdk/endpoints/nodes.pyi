@@ -107,6 +107,8 @@ class Node(HistoryModelMixin, AirModel):
         pos_x: X position of the node
         pos_y: Y position of the node
         labels: Labels of the node
+        placement_group: Simulation-local co-location group; an empty string means
+            the node is ungrouped. Defaults to empty on older API responses.
         metadata: Custom metadata for the node (JSON string)
         advanced: Advanced attributes of the node
         cdrom: CDROM attributes of the node
@@ -139,6 +141,8 @@ class Node(HistoryModelMixin, AirModel):
     storage_pci: dict[str, StoragePCIField] | None
     management_interfaces: dict[str, NodeManagementInterfaceInfo] | None
 
+    placement_group: str = ''
+
     @classmethod
     def get_model_api(cls) -> type[NodeEndpointAPI]: ...
     @property
@@ -154,6 +158,7 @@ class Node(HistoryModelMixin, AirModel):
         pos_x: int = ...,
         pos_y: int = ...,
         labels: dict[str, Any] = ...,
+        placement_group: str = ...,
         metadata: str | None = ...,
         advanced: dict[str, Any] = ...,
         cdrom: NodeCDROMWrite | None = ...,
@@ -161,6 +166,12 @@ class Node(HistoryModelMixin, AirModel):
         management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> None:
         """Update the node's properties.
+
+        Note:
+            Placement-group edits require an INACTIVE simulation with no
+            non-deleted checkpoints. Update the parent of a generated child;
+            the API propagates membership to its direct children. Refresh any
+            previously fetched child objects to see the updated membership.
 
         Args:
             name: Name of the node
@@ -172,6 +183,9 @@ class Node(HistoryModelMixin, AirModel):
             pos_y: Y position of the node
             management_interfaces: Per-interface management addresses
             labels: Labels of the node
+            placement_group: Case-sensitive co-location group, at most 64
+                characters. Omit to leave unchanged; pass `''` to clear.
+                The API trims surrounding whitespace. `None` is not supported.
             metadata: Custom metadata for the node (JSON string)
             advanced: Advanced attributes of the node
             cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
@@ -197,6 +211,9 @@ class Node(HistoryModelMixin, AirModel):
 
             # eject the CD-ROM
             >>> node.update(cdrom=None)
+
+            >>> node.update(placement_group='rack-a')
+            >>> node.update(placement_group='')  # Remove group membership.
         """
         ...
 
@@ -374,12 +391,19 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         pos_x: int = ...,
         pos_y: int = ...,
         labels: NodeLabels = ...,
+        placement_group: str = ...,
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> Node:
         """Create a new node.
+
+        Note:
+            Nodes with the same non-empty placement group in one simulation
+            must fit together on one worker and use the same CPU architecture.
+            Group names are independent of visual `labels.group` values.
+            Requires an API deployment that supports placement groups.
 
         Args:
             name: Name of the node
@@ -391,6 +415,9 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_x: (optional) X position of the node
             pos_y: (optional) Y position of the node
             labels: (optional) Labels of the node
+            placement_group: Optional case-sensitive co-location group, at most
+                64 characters. Omit or pass `''` for an ungrouped node. The API
+                trims surrounding whitespace. `None` is not supported.
             advanced: (optional) Advanced attributes of the node
             cdrom: (optional) CD-ROM assignment; `{'image': <Image or id>}` to
                 attach, or `None` to leave empty
@@ -403,6 +430,13 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         Example
         -------
             >>> node = api.nodes.create(simulation=sim, image=image, name='my-node')
+
+            >>> node = api.nodes.create(
+            ...     simulation=sim,
+            ...     image=image,
+            ...     name='compute-1',
+            ...     placement_group='rack-a',
+            ... )
 
             >>> # attach a CD-ROM image at creation
             >>> node = api.nodes.create(
@@ -487,12 +521,18 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         pos_x: int = ...,
         pos_y: int = ...,
         labels: NodeLabels = ...,
+        placement_group: str = ...,
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> Node:
         """Update a specific node by ID.
+
+        Note:
+            Placement-group edits require an INACTIVE simulation with no
+            non-deleted checkpoints. Set membership on the parent of generated
+            children; the API propagates it to the direct children.
 
         Args:
             node: The node to update (Node object or ID)
@@ -504,6 +544,9 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_x: X position of the node
             pos_y: Y position of the node
             labels: Labels of the node
+            placement_group: Case-sensitive co-location group, at most 64
+                characters. Omit to leave unchanged; pass `''` to clear.
+                The API trims surrounding whitespace. `None` is not supported.
             advanced: Advanced attributes of the node
             cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
                 replace, or `None` to eject
@@ -537,6 +580,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         pos_x: int = ...,
         pos_y: int = ...,
         labels: NodeLabels = ...,
+        placement_group: str = ...,
         metadata: str | None = ...,
         advanced: NodeAdvanced = ...,
         cdrom: NodeCDROMWrite | None = ...,
@@ -544,6 +588,11 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
     ) -> Node:
         """Patch a specific node by ID.
+
+        Note:
+            Placement-group edits require an INACTIVE simulation with no
+            non-deleted checkpoints. Set membership on the parent of generated
+            children; the API propagates it to the direct children.
 
         Args:
             pk: The node ID (string or UUID)
@@ -555,6 +604,9 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             pos_x: X position of the node
             pos_y: Y position of the node
             labels: Labels of the node
+            placement_group: Case-sensitive co-location group, at most 64
+                characters. Omit to leave unchanged; pass `''` to clear.
+                The API trims surrounding whitespace. `None` is not supported.
             advanced: Advanced attributes of the node
             cdrom: CD-ROM assignment; `{'image': <Image or id>}` to attach or
                 replace, or `None` to eject
@@ -593,6 +645,7 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
         cdrom: NodeCDROMWrite | None = ...,
         storage_pci: dict[str, StoragePCIField] | None = ...,
         management_interfaces: dict[str, NodeManagementInterfaceInfo] = ...,
+        placement_group: str = ...,
         **kwargs: Any,
     ) -> Node:
         # fmt: off
@@ -615,13 +668,16 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
                 attach, or `None` to leave empty
             storage_pci: Optional storage PCI configuration
             management_interfaces: Optional per-interface management addresses
+            placement_group: Optional case-sensitive co-location group, at most
+                64 characters. Omit or pass `''` for an ungrouped node. The API
+                trims surrounding whitespace. `None` is not supported.
             **kwargs: Additional parameters
 
         Returns:
             The created Node object
         Example:
             # using system node template object
-            >>> system_node = api.nodes.get('system-node-template-id')
+            >>> system_node = api.systems.get('system-node-template-id')
             >>> node = api.nodes.create_from_system_node(
             ...     system_node=system_node,
             ...     name='my-node',
@@ -631,7 +687,8 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
             >>> node = api.nodes.create_from_system_node(
             ...     system_node='system-node-template-id',
             ...     name='my-node',
-            ...     simulation='simulation-id'
+            ...     simulation='simulation-id',
+            ...     placement_group='rack-a',
             ... )
         """
         ...
