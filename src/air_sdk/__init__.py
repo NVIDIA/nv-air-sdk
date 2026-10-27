@@ -41,6 +41,8 @@ __all__ = [
     'Resources',
     'SimRequiredResources',
     'SimState',
+    'ZTPConfigs',
+    'ZTPConfigsUpdate',
     # endpoints
     'Checkpoint',
     'CheckpointEndpointAPI',
@@ -82,6 +84,8 @@ __all__ = [
     'SSHKeyEndpointAPI',
     'Training',
     'TrainingEndpointAPI',
+    'ZTPTemplate',
+    'ZTPTemplateEndpointAPI',
     'UserConfigAPI',
     'UserConfigEndpointApi',
     # Organization / Resource Budget endpoint
@@ -110,6 +114,8 @@ from air_sdk.types import (
     Resources,
     SimRequiredResources,
     SimState,
+    ZTPConfigs,
+    ZTPConfigsUpdate,
 )
 
 if TYPE_CHECKING:
@@ -143,6 +149,7 @@ if TYPE_CHECKING:
         WorkerClientCertificateEndpointAPI,
         WorkerEndpointAPI,
         ZTPScriptEndpointAPI,
+        ZTPTemplateEndpointAPI,
     )
 
 
@@ -338,6 +345,12 @@ class AirApi:
         from .endpoints import ZTPScriptEndpointAPI
 
         return ZTPScriptEndpointAPI(self)
+
+    @property
+    def ztp_templates(self) -> ZTPTemplateEndpointAPI:
+        from .endpoints import ZTPTemplateEndpointAPI
+
+        return ZTPTemplateEndpointAPI(self)
 
     @property
     def workers(self) -> WorkerEndpointAPI:
@@ -592,6 +605,8 @@ from air_sdk.endpoints import (  # noqa: E402
     Training,
     TrainingEndpointAPI,
     UserConfigEndpointAPI,
+    ZTPTemplate,
+    ZTPTemplateEndpointAPI,
 )
 
 SimulationApi = SimulationEndpointAPI  # v1 BC alias

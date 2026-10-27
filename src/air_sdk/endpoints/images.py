@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from http import HTTPStatus
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Literal, Optional, TypedDict, Union
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc import BaseCompatMixin, ImageCompatMixin
@@ -47,6 +47,39 @@ class MinimumResources:
     cpu: int
     memory: int
     storage: int
+
+
+class PlainMountpoint(TypedDict):
+    """A root file system that is a single partition, declared as an object."""
+
+    type: Literal['plain']
+    # Absolute path to the partition hosting the root. A root is a whole
+    # filesystem, so this takes no subpath.
+    partition: str
+
+
+class OverlayVolume(TypedDict):
+    """A directory inside a volume, used as an overlay's upper or work layer."""
+
+    # Device holding the directory, in `/dev/VG/LV` form for a logical volume
+    volume: str
+    # Absolute path to the directory within `volume`
+    subpath: str
+
+
+class OverlayMountpoint(TypedDict):
+    """A root file system assembled from several volumes, which no path names."""
+
+    schema_version: int
+    type: Literal['overlay']
+    # Read-only volumes forming the base, closest to the merged view first
+    lower: list[str]
+    upper: OverlayVolume
+    # Scratch directory the overlay requires, on the same volume as `upper`
+    work: OverlayVolume
+
+
+AdvancedMountpoint = PlainMountpoint | OverlayMountpoint
 
 
 @dataclass(eq=False)
@@ -88,7 +121,11 @@ class Image(HistoryModelMixin, BaseCompatMixin, ImageCompatMixin, AirModel):
         created: Timestamp when the image was created
         creator: User who created the image
         modified: Timestamp when the image was last modified
-        mountpoint: Mountpoint of the image
+        mountpoint: Mountpoint of the image, for a root that is a single
+            partition named by one path
+        advanced_mountpoint: Mountpoint of the image declared as an object, for
+            a root that one path cannot express. Mutually exclusive with
+            mountpoint
         minimum_resources: Minimum resources required to run the image
         includes_air_agent: Whether the image includes the Air agent
         cpu_arch: CPU architecture of the image
@@ -125,6 +162,9 @@ class Image(HistoryModelMixin, BaseCompatMixin, ImageCompatMixin, AirModel):
     default_password: str = field(repr=False)
     version: str
     mountpoint: str | None = field(repr=False)
+    # Nested payload stays loose at runtime so a newer air-api can add fields
+    # without requiring an SDK upgrade; the stub carries the strict TypedDicts.
+    advanced_mountpoint: dict[str, Any] | None = field(repr=False)
     emulation_type: list[str] = field(repr=False)
     emulation_version: str = field(repr=False)
     provider: str = field(repr=False)

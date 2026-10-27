@@ -26,6 +26,8 @@ from air_sdk.types import (
     NodeAssignmentDataV3,
     NodeRebuildPayload,
     NodeResetPayload,
+    ZTPConfigs,
+    ZTPConfigsUpdate,
 )
 
 @dataclass(eq=False)
@@ -297,28 +299,55 @@ class Simulation(HistoryModelMixin, AirModel):
         """
         ...
 
-    def create_ztp_script(self, *, content: str) -> ZTPScript:
+    def create_ztp_script(
+        self,
+        *,
+        content: str = ...,
+        ztp_configs: ZTPConfigs | dict[str, Any] = ...,
+    ) -> ZTPScript:
         # fmt: off
-        """Create a ZTP (Zero Touch Provisioning) script for the simulation.
-        
+        """Create a ZTP (Zero Touch Provisioning) configuration for the simulation.
+
+        Send either `content` or `ztp_configs`, not both.
+
         Args:
-            content: The content of the ZTP script
-            
+            content: The Cumulus provisioning script
+            ztp_configs: The configuration keyed by OS type: `cumulus` (the
+                         provisioning script) and/or `nvos` (the ZTP JSON object)
+
         Returns:
             The created ZTPScript instance
-            
+
         Example:
             >>> script = simulation.create_ztp_script(
             ...     content='#!/bin/bash\\n#CUMULUS-AUTOPROVISIONING\\necho "Hello World"'
             ... )
+
+            >>> script = simulation.create_ztp_script(
+            ...     ztp_configs={'nvos': {'ztp': {'01-image': {'uninstall': True}}}}
+            ... )
         """
         ...
         # fmt: on
-    def update_ztp_script(self, *, content: str) -> ZTPScript:
-        """Update the ZTP script for this simulation.
+    def update_ztp_script(
+        self,
+        *,
+        content: str = ...,
+        ztp_configs: ZTPConfigs | ZTPConfigsUpdate | dict[str, Any] = ...,
+    ) -> ZTPScript:
+        """Update the ZTP configuration for this simulation.
+
+        Send either `content` or `ztp_configs`, not both. Only the OS types sent
+        are written; the others are kept. Each OS type sent replaces its whole
+        configuration, with nothing merged inside it: to change one NVOS
+        section, send the complete NVOS configuration. An OS type set to `None`
+        is removed; removing the last one needs `delete_ztp_script()`.
 
         Args:
-            content: The new script content
+            content: The new Cumulus provisioning script
+            ztp_configs: The new configuration of each OS type sent, keyed by OS
+                         type: `cumulus` (the provisioning script) or `nvos` (the
+                         ZTP JSON object), or `None` to remove that OS type
 
         Returns:
             The updated ZTPScript instance
@@ -327,13 +356,21 @@ class Simulation(HistoryModelMixin, AirModel):
             >>> updated_script = simulation.update_ztp_script(
             ...     content='#!/bin/bash\\n#CUMULUS-AUTOPROVISIONING\\necho "Updated"'
             ... )
+
+            >>> updated_script = simulation.update_ztp_script(
+            ...     ztp_configs={'nvos': {'ztp': {'01-image': {'uninstall': False}}}}
+            ... )
+
+            >>> # Remove the NVOS configuration; the Cumulus script is kept
+            >>> updated_script = simulation.update_ztp_script(ztp_configs={'nvos': None})
         """
         ...
 
     def delete_ztp_script(self) -> None:
-        """Delete the ZTP script for this simulation.
+        """Delete the ZTP configuration for this simulation, including every OS type.
 
-        After deletion, simulation.ztp_script will return None.
+        After deletion, simulation.ztp_script will return None. To remove one OS
+        type and keep the others, set it to `None` with `update_ztp_script()`.
 
         Example:
             >>> simulation.delete_ztp_script()
@@ -418,7 +455,7 @@ class Simulation(HistoryModelMixin, AirModel):
 
         Example:
             >>> if script := simulation.ztp_script:
-            ...     print(script.content)
+            ...     print(script.ztp_configs)
         """
         ...
 
@@ -722,7 +759,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         format: str,
         content: dict[str, Any] | str,
         name: str,
-        ztp: str | None = ...,
+        ztp: str | ZTPConfigs | dict[str, Any] | None = ...,
         attempt_start: bool = ...,
         start_timeout: timedelta | None = ...,
     ) -> Simulation:
@@ -739,7 +776,9 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
                      topology may include top-level ``services`` and
                      ``instructions`` lists in addition to ``nodes``/``links``.
             name: Name for the new simulation
-            ztp: Optional ZTP script content
+            ztp: Optional ZTP configuration: an object keyed by OS type
+                 (`cumulus`: the provisioning script, `nvos`: the ZTP JSON
+                 object), or a string holding the Cumulus script
             attempt_start: When enabled, waits for the simulation creation to
                            complete and then starts it automatically
             start_timeout: Maximum time to wait for simulation creation
@@ -788,7 +827,8 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         - name: Simulation name
         - content: Topology data (for JSON format: dict with 'nodes', 'links',
           'oob'; may also declare top-level 'services' and 'instructions' lists)
-        - ztp: Optional ZTP script content
+        - ztp: Optional ZTP configuration: an object keyed by OS type, or a string
+          holding the Cumulus script
 
         Args:
             simulation_manifest: Full simulation manifest (dict, JSON string,
@@ -852,7 +892,7 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
         *,
         topology_data: str | Path | TextIOBase,
         name: str,
-        ztp: str | None = ...,
+        ztp: str | ZTPConfigs | dict[str, Any] | None = ...,
         attempt_start: bool = ...,
         start_timeout: timedelta | None = ...,
     ) -> Simulation:
@@ -864,7 +904,9 @@ class SimulationEndpointAPI(BaseEndpointAPI[Simulation]):
                 or file handle)
             name: Simulation name. If not provided, defaults to the graph name
                   declared in the DOT content
-            ztp: Optional ZTP script content
+            ztp: Optional ZTP configuration: an object keyed by OS type
+                 (`cumulus`: the provisioning script, `nvos`: the ZTP JSON
+                 object), or a string holding the Cumulus script
             attempt_start: When enabled, waits for the simulation creation to
                            complete and then starts it automatically
             start_timeout: Maximum time to wait for simulation creation

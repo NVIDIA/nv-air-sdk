@@ -305,6 +305,34 @@ class SimRequiredResources(TypedDict):
     compute_hours: float
 
 
+class ZTPConfigs(TypedDict, total=False):
+    """A simulation's ZTP configuration, keyed by OS type.
+
+    Only the configured OS types are present.
+
+    Attributes:
+        cumulus: The Cumulus provisioning script.
+        nvos: The NVOS ZTP configuration, a JSON object.
+    """
+
+    cumulus: str
+    nvos: dict[str, Any]
+
+
+class ZTPConfigsUpdate(TypedDict, total=False):
+    """A change to a simulation's ZTP configuration, keyed by OS type.
+
+    OS types left out are kept, and an OS type set to `None` is removed.
+
+    Attributes:
+        cumulus: The new Cumulus provisioning script, or None to remove it.
+        nvos: The new NVOS ZTP configuration, a JSON object, or None to remove it.
+    """
+
+    cumulus: str | None
+    nvos: dict[str, Any] | None
+
+
 # ============================================================================
 # Type Checking Utilities
 # ============================================================================

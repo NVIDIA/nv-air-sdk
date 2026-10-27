@@ -81,6 +81,8 @@ __all__ = [
     'System',
     'ZTPScript',
     'ZTPScriptEndpointAPI',
+    'ZTPTemplate',
+    'ZTPTemplateEndpointAPI',
     'Interface',
     'mixins',
     'MarketplaceDemo',
@@ -161,6 +163,7 @@ from air_sdk.endpoints.workers import (
     WorkerEndpointAPI,
 )
 from air_sdk.endpoints.ztp_scripts import ZTPScript, ZTPScriptEndpointAPI
+from air_sdk.endpoints.ztp_templates import ZTPTemplate, ZTPTemplateEndpointAPI
 
 # Backward compatibility aliases
 ServiceAPI = ServiceEndpointAPI  # v1

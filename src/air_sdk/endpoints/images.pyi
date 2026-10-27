@@ -9,7 +9,7 @@ Stub file for images endpoint type hints.
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterator, List, Literal
+from typing import Iterator, List, Literal, TypedDict
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.endpoints.history import HistoryModelMixin
@@ -20,6 +20,54 @@ class MinimumResources:
     cpu: int
     memory: int
     storage: int
+
+class PlainMountpoint(TypedDict):
+    """A root file system that is a single partition, declared as an object.
+
+    Says what `Image.mountpoint` says. Use it to declare every image the same
+    way rather than naming some roots as a path and others as an object.
+
+    Attributes:
+        type: Always `plain`
+        partition: Absolute path to the partition hosting the root. A root is
+                   a whole filesystem, so this takes no subpath
+    """
+
+    type: Literal['plain']
+    partition: str
+
+class OverlayVolume(TypedDict):
+    """A directory inside a volume, used as an overlay's upper or work layer.
+
+    Attributes:
+        volume: Device holding the directory, in `/dev/VG/LV` form for a
+                logical volume
+        subpath: Absolute path to the directory within `volume`
+    """
+
+    volume: str
+    subpath: str
+
+class OverlayMountpoint(TypedDict):
+    """A root file system assembled from several volumes, which no path names.
+
+    Attributes:
+        schema_version: Version of this declaration format
+        type: Always `overlay`
+        lower: Read-only volumes forming the base, ordered with the volume
+               closest to the merged view first
+        upper: Writable layer that receives every change
+        work: Scratch directory the overlay requires, on the same volume as
+              `upper`
+    """
+
+    schema_version: int
+    type: Literal['overlay']
+    lower: list[str]
+    upper: OverlayVolume
+    work: OverlayVolume
+
+AdvancedMountpoint = PlainMountpoint | OverlayMountpoint
 
 @dataclass(eq=False)
 class ImageShare(AirModel):
@@ -52,7 +100,11 @@ class Image(HistoryModelMixin, AirModel):
         created: Timestamp when the image was created
         creator: User who created the image
         modified: Timestamp when the image was last modified
-        mountpoint: Mountpoint of the image
+        mountpoint: Mountpoint of the image, for a root that is a single
+            partition named by one path
+        advanced_mountpoint: Mountpoint of the image declared as an object, for
+            a root that one path cannot express. Mutually exclusive with
+            mountpoint
         minimum_resources: Minimum resources required to run the image
         includes_air_agent: Whether the image includes the Air agent
         cpu_arch: CPU architecture of the image
@@ -81,6 +133,7 @@ class Image(HistoryModelMixin, AirModel):
     creator: str
     modified: datetime
     mountpoint: str | None
+    advanced_mountpoint: AdvancedMountpoint | None
     minimum_resources: MinimumResources
     includes_air_agent: bool
     cpu_arch: str
@@ -113,6 +166,7 @@ class Image(HistoryModelMixin, AirModel):
         default_username: str = ...,
         default_password: str = ...,
         mountpoint: str | None = ...,
+        advanced_mountpoint: AdvancedMountpoint | None = ...,
         cpu_arch: str = ...,
         includes_air_agent: bool = ...,
         emulation_type: list[str] = ...,
@@ -129,7 +183,11 @@ class Image(HistoryModelMixin, AirModel):
             version: Version of the image
             default_username: Default username for the image
             default_password: Default password for the image
-            mountpoint: Mountpoint of the image
+            mountpoint: Mountpoint of the image, for a root that is a single
+                partition named by one path
+            advanced_mountpoint: Mountpoint of the image declared as an object,
+                for a root that one path cannot express. Mutually exclusive
+                with mountpoint, so pass `None` for the other when switching
             cpu_arch: CPU architecture of the image
             includes_air_agent: Whether the image includes the Air agent
             emulation_type: The types of emulation the image supports
@@ -397,6 +455,7 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
         default_username: str,
         default_password: str,
         mountpoint: str | None = ...,
+        advanced_mountpoint: AdvancedMountpoint | None = ...,
         cpu_arch: str = ...,
         includes_air_agent: bool = ...,
         emulation_type: list[str] = ...,
@@ -415,7 +474,11 @@ class ImageEndpointAPI(BaseEndpointAPI[Image]):
             version: Version of the image
             default_username: Default username for the image
             default_password: Default password for the image
-            mountpoint: Mountpoint of the image
+            mountpoint: Mountpoint of the image, for a root that is a single
+                partition named by one path
+            advanced_mountpoint: Mountpoint of the image declared as an object,
+                for a root that one path cannot express. Mutually exclusive
+                with mountpoint
             cpu_arch: CPU architecture of the image
             includes_air_agent: Whether the image includes the Air agent
             emulation_type: The types of emulation the image supports

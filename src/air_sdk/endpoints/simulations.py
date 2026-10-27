@@ -80,25 +80,14 @@ class Simulation(HistoryModelMixin, BaseCompatMixin, SimulationCompatMixin, AirM
     def disable_auto_oob(self, **kwargs: Any) -> None:
         self.model_api.disable_auto_oob(simulation=self, **kwargs)
 
-    @validate_payload_types
-    def create_ztp_script(self, *, content: str, **kwargs: Any) -> ZTPScript:
-        ztp_script_endpoint_api = self.__api__.ztp_scripts
-        url = ztp_script_endpoint_api.url.format(simulation_id=self.id)
-        data = mixins.serialize_payload({'content': content, **kwargs})
-        response = self.__api__.client.post(url, data=data)
-        raise_if_invalid_response(response, status_code=HTTPStatus.CREATED)
+    def create_ztp_script(self, **kwargs: Any) -> ZTPScript:
+        created_script = self.__api__.ztp_scripts.create(simulation=self, **kwargs)
         self.refresh()
-        self.ztp_script = ztp_script_endpoint_api.load_model(
-            response.json() | {'simulation': self}
-        )
-        return self.ztp_script
+        self.ztp_script = created_script
+        return created_script
 
-    @validate_payload_types
-    def update_ztp_script(self, *, content: str, **kwargs: Any) -> ZTPScript:
-        ztp_script_endpoint_api = self.__api__.ztp_scripts
-        updated_script = ztp_script_endpoint_api.patch(
-            simulation=self, content=content, **kwargs
-        )
+    def update_ztp_script(self, **kwargs: Any) -> ZTPScript:
+        updated_script = self.__api__.ztp_scripts.update(simulation=self, **kwargs)
         self.ztp_script = updated_script
         return updated_script
 

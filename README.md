@@ -4,7 +4,7 @@ This project provides a Python SDK for interacting with the NVIDIA DSX Air API.
 
 ## Documentation
 
-For the full SDK documentation, please refer to the [API & SDK](https://docs.nvidia.com/air/sdk/latest/index.html) page on NVIDIA docs.
+For the full SDK documentation, please refer to the [SDK](https://docs.nvidia.com/dsx-air/sdk/) page on NVIDIA docs.
 
 For tutorials and code examples, please refer to the [examples README](./docs/README.md) in the `docs` directory. There you will find Jupyter notebooks covering various SDK features such as ZTP scripts and simulation import/export.
 

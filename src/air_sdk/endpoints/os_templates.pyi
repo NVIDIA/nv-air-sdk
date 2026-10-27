@@ -21,11 +21,17 @@ class OSTemplateRenderFile(_OSTemplateRenderFileRequired, total=False):
         owner: POSIX owner — user name or numeric uid. Defaults to `root`
         group: POSIX group — group name or numeric gid. Defaults to `root`
         mode: POSIX octal file mode. Defaults to `0644`
+        partition: Filesystem to write this one file into, overriding the
+                manifest's `os_template_partition`. A label or `/dev/` path,
+                optionally followed by `:subpath`. Defaults to the image's own
+                root file system, which lets one template write both into the
+                root and onto a volume outside it
     """
 
     owner: str
     group: str
     mode: str
+    partition: str
 
 @dataclass(eq=False)
 class OSTemplate(AirModel):

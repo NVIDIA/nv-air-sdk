@@ -25,7 +25,7 @@ Authentication
 --------------
 
 The SDK supports three authentication methods. See the
-`NVIDIA DSX Air authentication guide <https://docs.nvidia.com/networking-ethernet-software/nvidia-air-v2/Authentication/>`_
+`NVIDIA DSX Air authentication guide <https://docs.nvidia.com/dsx-air/authentication/>`_
 for details on obtaining credentials.
 
 **API Key** — pass an NGC Scoped API Key (SAK) directly:

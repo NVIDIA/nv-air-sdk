@@ -19,6 +19,10 @@ class OSTemplateRenderFile(_OSTemplateRenderFileRequired, total=False):
     owner: str  # POSIX owner, user name or numeric uid. Defaults to `root`
     group: str  # POSIX group, group name or numeric gid. Defaults to `root`
     mode: str  # POSIX octal file mode. Defaults to `0644`
+    # Filesystem to write this one file into, overriding the manifest's
+    # `os_template_partition`. A label or `/dev/` path, optionally followed by
+    # `:subpath`. Defaults to the image's own root file system.
+    partition: str
 
 
 @dataclass(eq=False)

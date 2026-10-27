@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.11.0] - 2026-10-27
+- Added a ZTP template API, exposed as `api.ztp_templates`. A ZTP template is the starting point offered in the ZTP editor for one OS type - a script for Cumulus, a configuration object for NVOS - and is shared across the platform rather than owned by an organization. Templates are identified by their OS type, so `api.ztp_templates.get('cumulus')` reads one directly. Any client with an Air role can read a template; creating, updating and deleting are restricted to Admin and SRE clients. Editing a template never changes the ZTP configuration a simulation has already saved.
+- A simulation's ZTP configuration now holds one entry per OS type, so a simulation can carry an NVOS ZTP configuration alongside, or instead of, a Cumulus script. `ZTPScript.ztp_configs` holds it, keyed by OS type: `cumulus` is the provisioning script and `nvos` the ZTP JSON object. `ZTPScript.content` is still the Cumulus script, and is `None` when only NVOS is configured, so code that reads `content` should handle `None`.
+- Use this release or later for NVOS ZTP. Earlier releases expect `content` to be a string, so they fail to print the ZTP script of an NVOS-only simulation.
+- `simulation.create_ztp_script()`, `simulation.update_ztp_script()`, `ZTPScript.update()` and the `api.ztp_scripts` methods accept `ztp_configs` as well as `content`. An update writes only the OS types it is given and keeps the others.
+- An update removes each OS type set to `None`, so `simulation.update_ztp_script(ztp_configs={'nvos': None})` removes only the NVOS configuration. An update that would remove the last OS type raises `AirUnexpectedResponse`; delete the configuration with `simulation.delete_ztp_script()` or `ZTPScript.delete()` instead.
+- `ztp_configs` and a `ztp` object on topology import need an Air release with per-OS ZTP support. On an older Air, creating with `ztp_configs` fails, updating with `ztp_configs` changes nothing, and importing with a `ztp` object fails.
+- Added `api.ztp_scripts.create()`, the same as `simulation.create_ztp_script()` but taking a simulation or its ID.
+- Topology imports accept `ztp` as an object keyed by OS type, as well as the Cumulus script string. Exports from an Air release with per-OS ZTP support always write `ztp` as that object, also for Cumulus-only simulations, so code that reads `ztp` as the script should read its `cumulus` entry.
+- `api.ztp_scripts.delete()` accepts only `simulation`, and `ZTPScript.delete()` accepts no argument. They used to accept any other argument and send it in the request body, where the API ignored it; an unknown argument now raises `TypeError` instead of deleting the whole configuration.
+- A printed `ZTPScript` now lists its configured OS types.
+- The ZTP script example notebook shows per-OS configuration, and no longer assumes every configuration has a Cumulus script.
+
+# [1.10.0] - 2026-10-06
+- Added `advanced_mountpoint` to `Image`, for an image whose operating system root is not a single partition and so cannot be named by `mountpoint`. Set it to `{'type': 'overlay', ...}` to declare a root assembled from several volumes, or to `{'type': 'plain', 'partition': '/dev/sda4'}` to declare a single-partition root as an object. An image names its root once, so set `mountpoint` or `advanced_mountpoint`, not both; pass `None` for the other when switching. `mountpoint` is unchanged, and images that use it need no update.
+- Added `partition` to OS template render entries, which sends one rendered file to a filesystem other than the rest of the template's files. Takes a filesystem label or `/dev/` path, optionally followed by `:` and a path within it, and defaults to the image's own root file system. This lets a single template write both into the root and onto a volume outside it.
+
 # [1.9.0] - 2026-09-29
 - Added support for node placement-group.
 - Added placement-group examples for node operations and simulation import/export.
