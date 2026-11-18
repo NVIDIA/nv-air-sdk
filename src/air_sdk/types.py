@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import inspect
+import sys
+import typing
 from datetime import datetime
 from enum import Enum
 from types import UnionType
@@ -25,6 +27,7 @@ from typing import (
 
 if TYPE_CHECKING:
     from air_sdk.air_model import PrimaryKey
+    from air_sdk.endpoints.interfaces import Interface
     from air_sdk.endpoints.nodes import Node
     from air_sdk.endpoints.user_configs import UserConfig
 
@@ -109,6 +112,19 @@ PAR_STATUS: TypeAlias = Literal[
     'DENIED',
     'REMOVED',
     'CANCELLED',
+]
+
+
+# ============================================================================
+# Access Request Constants
+# ============================================================================
+
+ACCESS_REQUEST_STATUS: TypeAlias = Literal[
+    'REQUESTED',
+    'GRANTED',
+    'DENIED',
+    'REVOKED',
+    'CLOSED',
 ]
 
 
@@ -205,6 +221,48 @@ class NodeManagementInterfaceInfo(TypedDict, total=False):
 
     ip: str | None
     mac_address: str | None
+
+
+class NodeBreakoutOptionInterface(TypedDict):
+    """An interface a port currently carries, as listed in its breakout options.
+
+    Attributes:
+        id: The interface ID; pass it to a bulk breakout to change the port
+        name: The interface name
+    """
+
+    id: str
+    name: str
+
+
+class NodeBreakoutOption(TypedDict):
+    """How one physical port of a node is split, and how else it may be.
+
+    Breakout options are a mapping keyed by each port's display name (e.g.
+    'swp1'); this is the value. The key is a label, not an identifier.
+
+    Attributes:
+        split: The split factor the port is currently at (e.g. '1x', '4x')
+        split_options: Every split factor the port supports, smallest first
+        interfaces: The interfaces the port currently carries, in order
+    """
+
+    split: str
+    split_options: list[str]
+    interfaces: list[NodeBreakoutOptionInterface]
+
+
+class InterfaceBreakoutEntry(TypedDict):
+    """One port to re-split in a bulk breakout.
+
+    Attributes:
+        id: Any interface the port currently carries
+        split: The split factor to move the port to (e.g. '4x'); the un-split
+            factor (e.g. '1x') reverts it
+    """
+
+    id: Interface | PrimaryKey
+    split: str
 
 
 class ResourceBudgetUsage(TypedDict):
@@ -385,28 +443,33 @@ def type_check_typed_dict(value: Any, expected_type: Type[Any]) -> bool:
     )
 
 
-# ``ForwardRef._evaluate`` is a private CPython API whose signature drifted in
-# Python 3.13: ``recursive_guard`` became keyword-only and a ``type_params``
-# parameter was added. Detect the extra parameter once at import time rather than
-# on every forward-reference resolution.
+# Prefer the public ``typing.evaluate_forward_ref`` (3.14+): the private
+# ``ForwardRef._evaluate`` warns on every call there and is removed in 3.16. Earlier
+# versions only have the private one, whose signature varies: ``recursive_guard`` must
+# go by keyword, and ``type_params`` only where accepted, so probe for it once.
+_TYPING_EVALUATE_FORWARD_REF = getattr(typing, 'evaluate_forward_ref', None)
 _FORWARD_REF_EVALUATE_HAS_TYPE_PARAMS = (
-    'type_params' in inspect.signature(ForwardRef._evaluate).parameters
+    _TYPING_EVALUATE_FORWARD_REF is None
+    and 'type_params' in inspect.signature(ForwardRef._evaluate).parameters
 )
 
 
 def _evaluate_forward_ref(ref: ForwardRef) -> Any:
     """Resolve a ``ForwardRef`` in a way that works across Python versions.
 
-    Passing ``recursive_guard`` positionally (as older code did) raises
-    ``TypeError`` on Python 3.13, which surfaces to users as a spurious
-    ``UserWarning`` and silently skips type validation. Pass it by keyword
-    (valid on 3.10-3.13) and supply ``type_params`` only when the running
-    interpreter expects it (see ``_FORWARD_REF_EVALUATE_HAS_TYPE_PARAMS``).
+    Names resolve in the module the reference records (``TypedDict`` fields do, and
+    callers resolving another module's annotation must set it), otherwise in this one.
     """
+    # Python <= 3.13 resolves in that module even when handed a namespace, while 3.14
+    # lets the namespace win, so pick it here to keep every version in step.
+    module = sys.modules.get(ref.__forward_module__) if ref.__forward_module__ else None
+    globalns = globals() if module is None else vars(module)
+    if _TYPING_EVALUATE_FORWARD_REF is not None:
+        return _TYPING_EVALUATE_FORWARD_REF(ref, globals=globalns, type_params=())
     kwargs: dict[str, Any] = {'recursive_guard': frozenset()}
     if _FORWARD_REF_EVALUATE_HAS_TYPE_PARAMS:
         kwargs['type_params'] = ()
-    return ref._evaluate(globals(), locals(), **kwargs)
+    return ref._evaluate(globalns, None, **kwargs)
 
 
 def type_check(value: Any, expected_type: Type[Any]) -> bool:

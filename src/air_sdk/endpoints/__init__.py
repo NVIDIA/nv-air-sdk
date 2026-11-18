@@ -47,6 +47,8 @@ __all__ = [
     'MarketplaceDemoEndpointAPI',
     'MarketplaceDemoApi',  # BC alias for v1
     'MarketplaceDemoEndpointApi',  # BC alias for v2
+    'MarketplaceDemoAccessRequest',
+    'MarketplaceDemoAccessRequestEndpointAPI',
     'MarketplaceDemoPublishAccessRecord',
     'MarketplaceDemoPublishAccessRecordEndpointAPI',
     'MarketplaceDemoTagEndpointAPI',
@@ -116,6 +118,10 @@ from air_sdk.endpoints.images import (
 )
 from air_sdk.endpoints.interfaces import Interface, InterfaceEndpointAPI
 from air_sdk.endpoints.links import Link, LinkEndpointAPI
+from air_sdk.endpoints.marketplace_demo_access_requests import (
+    MarketplaceDemoAccessRequest,
+    MarketplaceDemoAccessRequestEndpointAPI,
+)
 from air_sdk.endpoints.marketplace_demo_publish_access_records import (
     MarketplaceDemoPublishAccessRecord,
     MarketplaceDemoPublishAccessRecordEndpointAPI,

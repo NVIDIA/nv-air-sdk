@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# [1.12.0] - 2026-11-17
+- Fixed the deprecated `links.bulk_create()` rejecting a tuple, generator or other iterable of link dicts with `TypeError` since 1.13.0. It again accepts any iterable of link dicts, as it did in 1.11.0, not only a list. Passing a string, bytes or a single dict instead of an iterable of dicts raises `TypeError` with a clear message.
+- Added breakout options for nodes managed by a platform: you can now see how a node's physical ports are currently split, which splits each supports, and which interfaces each carries.
+- Added bulk breakout for nodes managed by a platform: you can now re-split several of a node's ports in a single request, which is applied in full or not at all and returns the interfaces it created. On these nodes, use bulk breakout instead of breaking out or reverting interfaces one at a time, which isn't supported for them.
+- Added support for marketplace demo previews. A restricted demo can now be published in "preview" mode, which lists it for every authenticated user while keeping provisioning limited to the allowlisted organizations. Pass `preview=True` when publishing or requesting a visibility change, and read the new `preview`, `is_owned_by_client`, `access_request_status`, and `can_provision` fields on `MarketplaceDemo`. `can_provision` tells you whether your organization can launch a demo it can see, so check it before calling `provision()`. Demos can also be filtered by `is_owned_by_client`.
+- Added marketplace demo access requests. An organization that cannot yet provision a preview demo can request access with `marketplace_demo.request_access(company_name=...)` and read its own request with `marketplace_demo.get_access_request()`. Administrators review requests through the new `api.marketplace_demo_access_requests` endpoint, which supports listing, retrieving, and accepting or denying a request. Accepting one adds the requesting organization to the demo's allowlist.
+- Added `preview` and `prefer_preview` to `MarketplaceDemoPublishAccessRecord`, plus a `preview` option on its `approve()` and `set_visibility()` actions.
+- Added examples for demo previews and access requests to the marketplace demo and publishing example notebooks.
+- The new preview fields read as `None` against an Air deployment that does not report them yet, so upgrading the SDK ahead of the API is safe.
+- Fixed argument validation being silently skipped on some arguments, which now raise `TypeError` when given the wrong type instead of sending a malformed request. Affects the `simulation` argument of `simulations.create_service()`, and the `links` argument of the deprecated `links.bulk_create()`, which must now be a list of dicts.
+- Fixed argument validation on Python 3.14, which emitted a `DeprecationWarning` for some arguments and broke when warnings are treated as errors.
+
 # [1.11.0] - 2026-10-27
 - Added a ZTP template API, exposed as `api.ztp_templates`. A ZTP template is the starting point offered in the ZTP editor for one OS type - a script for Cumulus, a configuration object for NVOS - and is shared across the platform rather than owned by an organization. Templates are identified by their OS type, so `api.ztp_templates.get('cumulus')` reads one directly. Any client with an Air role can read a template; creating, updating and deleting are restricted to Admin and SRE clients. Editing a template never changes the ZTP configuration a simulation has already saved.
 - A simulation's ZTP configuration now holds one entry per OS type, so a simulation can carry an NVOS ZTP configuration alongside, or instead of, a Cumulus script. `ZTPScript.ztp_configs` holds it, keyed by OS type: `cumulus` is the provisioning script and `nvos` the ZTP JSON object. `ZTPScript.content` is still the Cumulus script, and is `None` when only NVOS is configured, so code that reads `content` should handle `None`.
@@ -24,6 +36,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 # [1.9.0] - 2026-09-29
 - Added support for node placement-group.
 - Added placement-group examples for node operations and simulation import/export.
+- Added `secrets` field to `PluginImageManifest`.
+- Widened `PluginImageManifest.artifacts_directory_max_size_gb` from `int` to `float`.
 
 # [1.8.0] - 2026-09-08
 - Added a NOS Manifest API for platform injection: new `os_image_manifests`, `os_templates`, and `platform_information` endpoints, exposed as `api.os_image_manifests`, `api.os_templates`, and `api.platform_information`.

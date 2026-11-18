@@ -14,6 +14,7 @@ from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.endpoints.links import LinkEndpointAPI
 from air_sdk.endpoints.nodes import Node
 from air_sdk.endpoints.services import ServiceEndpointAPI
+from air_sdk.types import InterfaceBreakoutEntry
 
 @dataclass
 class InterfaceLabels:
@@ -118,6 +119,10 @@ class Interface(AirModel):
             >>> interface = api.interfaces.get('interface-id')
             >>> breakout_interfaces = interface.breakout(split_count=4)
             >>> # Creates swp1s0, swp1s1, swp1s2, swp1s3
+
+        Note:
+            - Not available for nodes managed by a platform; use
+              `node.bulk_breakout()` instead
         """
         ...
     def revert_breakout(self) -> Interface:
@@ -140,6 +145,8 @@ class Interface(AirModel):
             - Any existing connections on the breakout interfaces are
               automatically removed
             - Cannot revert if any breakout interface has services attached
+            - Not available for nodes managed by a platform; use
+              `node.bulk_breakout()` instead
         """
         ...
     @property
@@ -194,10 +201,10 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
             interface_role: Role of the interface
             scalable_unit: Scalable unit of the interface
             split: Breakout factor of the physical port this interface
-                belongs to ('1' = un-split, e.g. '2', '4'). Only meaningful
-                for nodes managed by a platform port map, where the
-                `name`/`split` pair must match the port map; when unset, the
-                interface is created at the platform's default split
+                belongs to ('1x' = un-split, e.g. '2x', '4x'). Only meaningful
+                for nodes managed by a platform where the
+                `name`/`split` pair must match the platforms specifications; when unset,
+                the interface is created at the platform's default split.
 
         Returns:
             The created Interface instance
@@ -206,8 +213,9 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
             >>> interface = api.interfaces.create(name='eth0', node=node)
             >>> interface = node.interfaces.create(name='eth0', node=node.id)
             >>>
-            >>> # On a platform-managed node, name/split must match the port map
-            >>> interface = api.interfaces.create(name='swp1s1', node=node, split='2')
+            >>> # On a platform-managed node, name/split must match the platforms
+            >>> # specifications.
+            >>> interface = api.interfaces.create(name='swp1s1', node=node, split='2x')
 
         """
         ...
@@ -319,6 +327,8 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
             - Any existing connection on the interface will be automatically removed
             - The original interface is renamed to <name>s0 and keeps its MAC address
             - New interfaces are created with allocated MAC addresses
+            - Not available for nodes managed by a platform; use
+              `bulk_breakout()` instead
         """
         # fmt: on
         ...
@@ -347,5 +357,54 @@ class InterfaceEndpointAPI(BaseEndpointAPI[Interface]):
             - Any existing connections on the breakout interfaces are
               automatically removed
             - Cannot revert if any breakout interface has services attached
+            - Not available for nodes managed by a platform; use
+              `bulk_breakout()` instead
         """
+        ...
+    def bulk_breakout(
+        self,
+        *,
+        node: Node | PrimaryKey,
+        interfaces: List[InterfaceBreakoutEntry],
+    ) -> List[Interface]:
+        # fmt: off
+        """Re-split several physical ports of a platform-managed node at once.
+
+        Each entry names a port by any interface it currently carries and the
+        split factor to move it to. The whole port is re-laid out from the
+        platform's specification: every interface it carries is deleted and the
+        interfaces the platform defines at the target split are created in
+        their place. Sending the un-split factor (e.g. '1x') reverts a port.
+
+        Read each port's current split, supported splits and interface IDs
+        with `node.breakout_options()`.
+
+        Args:
+            node: The node the interfaces are stored on.
+            interfaces: The ports to re-split, as `{'id': ..., 'split': ...}`
+                entries. `id` may be an Interface or an interface ID.
+
+        Returns:
+            Every interface the request created, in name order
+
+        Example:
+            >>> options = node.breakout_options()
+            >>> swp1 = options['swp1']['interfaces'][0]['id']
+            >>> created = api.interfaces.bulk_breakout(  # fmt: skip
+            ...     node=node, interfaces=[{'id': swp1, 'split': '4x'}]
+            ... )
+            >>> print([i.name for i in created])
+            ['swp1s0', 'swp1s1', 'swp1s2', 'swp1s3']
+
+        Note:
+            - The request is applied in full or not at all
+            - Each port that changes split has all of its interfaces replaced:
+              the interfaces it carried, including the one passed in, no longer
+              exist, so use the returned interfaces instead
+            - A port already at the requested split is left as it is: its
+              interfaces keep their IDs and are not returned
+            - Links on affected interfaces are removed, along with any
+              services on them
+        """
+        # fmt: on
         ...

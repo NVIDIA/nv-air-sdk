@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc import (
@@ -20,7 +20,17 @@ from air_sdk.endpoints.history import HistoryModelMixin
 # Import Simulation at runtime (not just TYPE_CHECKING) because get_type_hints() needs it
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.types import SimRequiredResources
-from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload_types
+from air_sdk.utils import (
+    filter_missing,
+    join_urls,
+    raise_if_invalid_response,
+    validate_payload_types,
+)
+
+if TYPE_CHECKING:
+    from air_sdk.endpoints.marketplace_demo_access_requests import (
+        MarketplaceDemoAccessRequest,
+    )
 
 
 @dataclass(eq=False)
@@ -44,6 +54,20 @@ class MarketplaceDemo(
         tags: The tags of the marketplace demo
         published: Whether the marketplace demo is published
         publicly_published: Whether a published demo is publicly accessible
+        is_owned_by_client: Whether the demo is owned by the caller's org. When True,
+            the caller can publish or unpublish the demo. None when read from an Air
+            deployment that does not yet report it.
+        preview: Whether the demo is in preview mode — listed for all authenticated
+            users while provisioning stays restricted to the allowlisted orgs. Only
+            True for a published, restricted demo whose publish access record has
+            preview enabled. None when read from an Air deployment that does not yet
+            report it.
+        access_request_status: Status of the caller's org's access request for this
+            demo, or None when the org has not requested access.
+        can_provision: Whether the caller can provision a simulation from this demo.
+            A preview demo is listed for everyone but provisionable only by the
+            allowlisted orgs; when False, request access with ``request_access()``.
+            None when read from an Air deployment that does not yet report it.
         icon: The icon of the marketplace demo
         demo: Demo simulation to be used as a base for cloned simulations.
         publish_access_record_id: The active publish access record ID, if any
@@ -67,6 +91,10 @@ class MarketplaceDemo(
     tags: list[str] = field(repr=False)
     published: bool = field(repr=False)
     publicly_published: bool = field(repr=False)
+    is_owned_by_client: bool | None = field(repr=False)
+    preview: bool | None = field(repr=False)
+    access_request_status: str | None = field(repr=False)
+    can_provision: bool | None = field(repr=False)
     demo_simulation_state: str = field(repr=False)
     expected_resource_usage: SimRequiredResources = field(repr=False)
     description: str | None
@@ -161,6 +189,26 @@ class MarketplaceDemo(
             marketplace_demo=self, **kwargs
         )
 
+    def request_access(self, **kwargs: Any) -> MarketplaceDemoAccessRequest:
+        """Request access to this preview marketplace demo for your org.
+
+        Example:
+            >>> marketplace_demo.request_access(
+            ...     company_name='Acme Corp',
+            ...     justification='Evaluating for a customer deployment',
+            ... )
+        """
+        return self.model_api.request_access(marketplace_demo=self, **kwargs)
+
+    def get_access_request(self, **kwargs: Any) -> MarketplaceDemoAccessRequest:
+        """Retrieve your org's access request for this marketplace demo.
+
+        Example:
+            >>> access_request = marketplace_demo.get_access_request()
+            >>> print(access_request.status)
+        """
+        return self.model_api.get_access_request(marketplace_demo=self, **kwargs)
+
     def provision(self, **kwargs: Any) -> Simulation:
         """Provision a simulation from this marketplace demo.
 
@@ -203,6 +251,8 @@ class MarketplaceDemoEndpointAPI(
     API_REQUEST_PUBLIC_PATH = 'request-public'
     API_REQUEST_ALLOWLIST_CHANGE_PATH = 'request-allowlist-change'
     API_CANCEL_PUBLISH_ACCESS_RECORD_PATH = 'cancel-publish-access-record'
+    API_REQUEST_ACCESS_PATH = 'request-access'
+    API_ACCESS_REQUEST_PATH = 'access-request'
     API_MANAGE_PATH = 'manage'
     API_TIGHTEN_ORDER_PATH = 'tighten-order'
     model = MarketplaceDemo
@@ -362,6 +412,60 @@ class MarketplaceDemoEndpointAPI(
         return self._patch_resource_action(
             marketplace_demo, self.API_CANCEL_PUBLISH_ACCESS_RECORD_PATH, **kwargs
         )
+
+    @validate_payload_types
+    def request_access(
+        self, *, marketplace_demo: MarketplaceDemo | PrimaryKey, **kwargs: Any
+    ) -> MarketplaceDemoAccessRequest:
+        """Request access to a preview marketplace demo on behalf of your org.
+
+        A preview demo is visible to every authenticated user but can only be
+        provisioned by the orgs on its allowlist. Requesting access queues your org
+        for an admin to accept or deny. Re-requesting updates your org's existing
+        request rather than creating another.
+
+        Example:
+            >>> api.marketplace_demos.request_access(
+            ...     marketplace_demo=marketplace_demo,
+            ...     company_name='Acme Corp',
+            ...     justification='Evaluating for a customer deployment',
+            ... )
+        """
+        url = mixins.build_resource_url(
+            self.url, marketplace_demo, self.API_REQUEST_ACCESS_PATH
+        )
+        response = self.__api__.client.patch(url, data=mixins.serialize_payload(kwargs))
+        # 201 on the org's first request, 200 when it updates an existing one.
+        raise_if_invalid_response(
+            response, status_code=(HTTPStatus.CREATED, HTTPStatus.OK)
+        )
+        if isinstance(marketplace_demo, MarketplaceDemo):
+            marketplace_demo.refresh()
+        return self.__api__.marketplace_demo_access_requests.load_model(response.json())
+
+    @validate_payload_types
+    def get_access_request(
+        self, *, marketplace_demo: MarketplaceDemo | PrimaryKey, **kwargs: Any
+    ) -> MarketplaceDemoAccessRequest:
+        """Retrieve your org's access request for a marketplace demo.
+
+        Always scoped to the calling org, including for admins. Raises
+        ``AirUnexpectedResponse`` when the demo is not visible or your org has not
+        requested access. Use ``api.marketplace_demo_access_requests.list()`` to
+        review requests from other orgs.
+
+        Example:
+            >>> access_request = api.marketplace_demos.get_access_request(
+            ...     marketplace_demo=marketplace_demo,
+            ... )
+            >>> print(access_request.status)
+        """
+        url = mixins.build_resource_url(
+            self.url, marketplace_demo, self.API_ACCESS_REQUEST_PATH
+        )
+        response = self.__api__.client.get(url, params=filter_missing(**kwargs))
+        raise_if_invalid_response(response)
+        return self.__api__.marketplace_demo_access_requests.load_model(response.json())
 
     @validate_payload_types
     def manage(

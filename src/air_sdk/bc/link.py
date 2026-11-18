@@ -8,6 +8,7 @@ Links-specific backward compatibility layer.
 
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from typing import TYPE_CHECKING, Any
 
 from air_sdk.air_model import PrimaryKey
@@ -72,7 +73,7 @@ class LinkEndpointAPICompatMixin:
     @deprecated('bulk_create() is deprecated, use create() for each link instead.')
     def bulk_create(
         self,
-        links: list[dict[str, Any]],  # type: ignore[valid-type]
+        links: Iterable[dict[str, Any]],
         **kwargs: Any,
     ) -> list[Link]:  # type: ignore[valid-type]
         """Bulk create links with v1/v2 backward compatibility.
@@ -81,7 +82,7 @@ class LinkEndpointAPICompatMixin:
         creates links one at a time by calling create() for each link.
 
         Args:
-            links: List of link dictionaries with format
+            links: Iterable (e.g. a list) of link dictionaries with format
                 `{"simulation_interfaces": [i1, i2]}` (v1/v2)
                 or `{"interfaces": [i1, i2]}` (v3).
             **kwargs: Additional keyword arguments forwarded to
@@ -91,12 +92,21 @@ class LinkEndpointAPICompatMixin:
             List of created Link objects.
 
         Raises:
+            TypeError: If `links` is a string, bytes, or a mapping rather than
+                an iterable of link dictionaries.
             ValueError: If the link dictionaries are missing both
                 `simulation_interfaces` and `interfaces` keys.
 
         .. deprecated::
             Use :meth:`create` for each link instead.
         """
+        # Strings, bytes and mappings are iterable, so the `Iterable` hint lets them
+        # through; reject them here rather than iterating their characters or keys.
+        if isinstance(links, (str, bytes, Mapping)):
+            raise TypeError(
+                f"Argument 'links' must be an iterable of dicts, got {type(links)}"
+            )
+
         # Drop any removed fields that might have been passed
         drop_removed_fields(kwargs, LinkCompatMixin._REMOVED_FIELDS)
         map_field_names(kwargs, LinkCompatMixin._FIELD_MAPPINGS)
@@ -105,7 +115,7 @@ class LinkEndpointAPICompatMixin:
         created_links = []
 
         try:
-            for link in links:  # type: ignore[attr-defined]
+            for link in links:
                 # Extract interfaces from the link dictionary
                 # Support both v1/v2 'simulation_interfaces' and v3 'interfaces'
                 if 'simulation_interfaces' in link:
@@ -128,9 +138,9 @@ class LinkEndpointAPICompatMixin:
         except Exception:
             # Rollback: Delete all links created in this request
             # (to match the old API behavior)
-            for link in created_links:
+            for created_link in created_links:
                 try:
-                    self.delete(link.id)  # type: ignore[attr-defined]
+                    self.delete(created_link.id)  # type: ignore[attr-defined]
                 except Exception:
                     # Ignore errors during rollback cleanup
                     pass

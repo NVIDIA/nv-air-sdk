@@ -17,6 +17,8 @@ from typing import (
     Any,
     BinaryIO,
     Callable,
+    Collection,
+    ForwardRef,
     Optional,
     TypeVar,
     cast,
@@ -32,7 +34,7 @@ from air_sdk.const import (
     DEFAULT_WAIT_FOR_STATE_TIMEOUT,
 )
 from air_sdk.exceptions import AirUnexpectedResponse
-from air_sdk.types import type_check
+from air_sdk.types import _evaluate_forward_ref, type_check
 
 if TYPE_CHECKING:
     from air_sdk.air_model import AirModel
@@ -54,18 +56,6 @@ def filter_missing(**kwargs: Any) -> dict[str, Any]:
     """
     return {k: v for k, v in kwargs.items() if not isinstance(v, _MISSING_TYPE)}
 
-
-# Mapping of string type names to actual builtin types
-BUILTIN_TYPES = {
-    'str': str,
-    'int': int,
-    'bool': bool,
-    'float': float,
-    'dict': dict,
-    'list': list,
-    'tuple': tuple,
-    'set': set,
-}
 
 API_URI_PATTERN = r'^/api/v\d+.*$'
 COMPILED_API_URI_PATTERN = re.compile(API_URI_PATTERN)
@@ -155,8 +145,11 @@ def _resolve_type_hints_fallback(func: Callable[..., Any]) -> dict[str, Any]:
     """
     Fallback type hint resolution when get_type_hints() fails.
 
-    This handles cases where TYPE_CHECKING imports aren't available at runtime.
-    Only validates types that can be resolved at runtime.
+    ``get_type_hints()`` resolves a function's annotations all-or-nothing, so one
+    TYPE_CHECKING-only name anywhere in the signature (including the return type)
+    makes it raise ``NameError`` and takes every other parameter down with it. This
+    resolves them one at a time instead, keeping whatever is resolvable at runtime
+    and skipping only the annotations that genuinely are not.
 
     Args:
         func: Function to extract type hints from
@@ -175,20 +168,23 @@ def _resolve_type_hints_fallback(func: Callable[..., Any]) -> dict[str, Any]:
         # Try to resolve each annotation individually
         try:
             if isinstance(annotation, str):
-                # Try basic type resolution from builtins
-                if annotation in BUILTIN_TYPES:
-                    hints[name] = BUILTIN_TYPES[annotation]
-                elif annotation == 'Any':
-                    hints[name] = Any
-                # Otherwise, skip (likely a TYPE_CHECKING import)
+                # `from __future__ import annotations` stringifies every annotation, so
+                # this covers builtins, `Any`, ordinary types, and unions of them
+                # (`Model | PrimaryKey`) alike. Tagging the defining module resolves
+                # names there, as `get_type_hints()` would, rather than in this one.
+                hints[name] = _evaluate_forward_ref(
+                    ForwardRef(annotation, module=func.__module__)
+                )
             elif hasattr(annotation, '__origin__'):
                 # Generic type like dict[str, Any]
                 hints[name] = annotation
             elif inspect.isclass(annotation):
                 # Real class
                 hints[name] = annotation
-        except Exception:
-            # Can't resolve - skip validation for this parameter
+        except NameError:
+            # A TYPE_CHECKING-only type - skip this parameter. Anything else is a real
+            # error and propagates, as it would from `get_type_hints()`, rather than
+            # silently switching validation off.
             continue
 
     return hints
@@ -341,20 +337,25 @@ def normalize_api_url(url: str) -> str:
 
 
 def raise_if_invalid_response(
-    res: Response, status_code: HTTPStatus = HTTPStatus.OK, data_type: type | None = dict
+    res: Response,
+    status_code: HTTPStatus | Collection[HTTPStatus] = HTTPStatus.OK,
+    data_type: type | None = dict,
 ) -> None:
     """
     Validates that a given API response has the expected status code and JSON payload
 
     Arguments:
     res (requests.HTTPResponse) - API response object
-    status_code [int] - Expected status code (default: 200)
+    status_code [HTTPStatus | Collection[HTTPStatus]] - Expected status code, or several
+    when the endpoint legitimately answers with more than one (default: HTTPStatus.OK)
 
     Raises:
     AirUnexpectedResponse - Raised if an unexpected response is received from the API
     """
     json = None
-    if res.status_code != status_code:
+    # `HTTPStatus` is an `int`, so this also keeps accepting a bare code such as 200.
+    expected = (status_code,) if isinstance(status_code, int) else tuple(status_code)
+    if res.status_code not in expected:
         raise AirUnexpectedResponse(message=res.text, status_code=res.status_code)
     if not data_type:
         return

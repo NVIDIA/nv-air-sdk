@@ -24,7 +24,7 @@ from air_sdk.bc import (
 )
 from air_sdk.endpoints import mixins
 from air_sdk.endpoints.nodes import Node
-from air_sdk.utils import raise_if_invalid_response, validate_payload_types
+from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload_types
 
 
 @dataclass
@@ -94,6 +94,7 @@ class InterfaceEndpointAPI(
     API_PATH = 'simulations/nodes/interfaces/'
     BREAKOUT_PATH = 'breakout'
     REVERT_BREAKOUT_PATH = 'revert-breakout'
+    BULK_BREAKOUT_PATH = 'bulk-breakout'
     model = Interface
 
     @validate_payload_types
@@ -123,3 +124,12 @@ class InterfaceEndpointAPI(
             interface.refresh()
 
         return self.load_model(response.json())
+
+    @validate_payload_types
+    def bulk_breakout(self, *, node: Node | PrimaryKey, **kwargs: Any) -> list[Interface]:
+        url = join_urls(self.url, self.BULK_BREAKOUT_PATH)
+        response = self.__api__.client.post(
+            url, data=mixins.serialize_payload({'node': node, **kwargs})
+        )
+        raise_if_invalid_response(response, status_code=HTTPStatus.OK, data_type=list)
+        return [self.load_model(data) for data in response.json()]

@@ -37,6 +37,13 @@ class MarketplaceDemoPublishAccessRecord(AirModel):
         status: Current status of the request
         publicly_published: Whether the marketplace demo should be publicly accessible
         prefer_public: Whether the requester prefers public over allowlist
+        preview: Whether the marketplace demo may be previewed — all authenticated
+            users can list and retrieve it, but only allowlisted orgs may provision
+            it. Preview requires restricted (non-public) publishing. None when read
+            from an Air deployment that does not yet report it.
+        prefer_preview: Whether the requester prefers preview publishing. Only takes
+            effect once the request is approved. None when read from an Air
+            deployment that does not yet report it.
         justification: Requester's reason for the request
         allowed_orgs_request_text: Free-text description of orgs to allowlist
         allowed_orgs: List of org UUIDs on the allowlist, or None.
@@ -59,6 +66,8 @@ class MarketplaceDemoPublishAccessRecord(AirModel):
     status: str
     publicly_published: bool = field(repr=False)
     prefer_public: bool = field(repr=False)
+    preview: bool | None = field(repr=False)
+    prefer_preview: bool | None = field(repr=False)
     justification: str = field(repr=False)
     allowed_orgs_request_text: str = field(repr=False)
     allowed_orgs: list[str] | None = field(repr=False)
@@ -130,6 +139,13 @@ class MarketplaceDemoPublishAccessRecordEndpointAPI(
             >>> api.marketplace_demo_publish_access_records.approve(
             ...     record=record,
             ...     publicly_published=True,
+            ... )
+
+            >>> # Approve as restricted, and allow previewing
+            >>> api.marketplace_demo_publish_access_records.approve(
+            ...     record=record,
+            ...     publicly_published=False,
+            ...     preview=True,
             ... )
         """
         return self._patch_resource_action(record, self.API_APPROVE_PATH, **kwargs)

@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from datetime import datetime
 from http import HTTPStatus
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Iterator, cast
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc import (
@@ -19,11 +20,11 @@ from air_sdk.endpoints.history import HistoryModelMixin
 from air_sdk.endpoints.images import Image
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
-from air_sdk.types import NodeManagementInterfaceInfo
+from air_sdk.types import NodeBreakoutOption, NodeManagementInterfaceInfo
 from air_sdk.utils import join_urls, raise_if_invalid_response, validate_payload_types
 
 if TYPE_CHECKING:
-    from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+    from air_sdk.endpoints.interfaces import Interface, InterfaceEndpointAPI
     from air_sdk.endpoints.links import LinkEndpointAPI
     from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
     from air_sdk.endpoints.services import Service, ServiceEndpointAPI
@@ -76,6 +77,12 @@ class Node(HistoryModelMixin, BaseCompatMixin, NodeCompatMixin, AirModel):
 
     def rebuild(self, **kwargs: Any) -> None:
         self.model_api.rebuild(node=self, **kwargs)
+
+    def breakout_options(self, **kwargs: Any) -> dict[str, NodeBreakoutOption]:
+        return self.model_api.breakout_options(node=self, **kwargs)
+
+    def bulk_breakout(self, **kwargs: Any) -> list[Interface]:
+        return self.interfaces.bulk_breakout(node=self, **kwargs)
 
     @property
     def instructions(self) -> NodeInstructionEndpointAPI:
@@ -134,6 +141,7 @@ class NodeEndpointAPI(
     API_PATH = 'simulations/nodes/'
     sim_path = 'simulations/'
     from_system_node_path = 'from-system-node/'
+    BREAKOUT_OPTIONS_PATH = 'breakout-options'
     model = Node
 
     @validate_payload_types
@@ -147,6 +155,18 @@ class NodeEndpointAPI(
         response = self.__api__.client.post(url, data=mixins.serialize_payload(kwargs))
         raise_if_invalid_response(response, status_code=HTTPStatus.CREATED)
         return self.load_model(response.json())
+
+    @validate_payload_types
+    def breakout_options(
+        self, *, node: Node | PrimaryKey, **kwargs: Any
+    ) -> dict[str, NodeBreakoutOption]:
+        url = mixins.build_resource_url(self.url, node, self.BREAKOUT_OPTIONS_PATH)
+        params = json.loads(mixins.serialize_payload(kwargs))
+        if isinstance(params.get('interfaces'), list):
+            params['interfaces'] = ','.join(params['interfaces'])
+        response = self.__api__.client.get(url, params=params)
+        raise_if_invalid_response(response)
+        return cast(dict[str, NodeBreakoutOption], response.json())
 
     def list_system_nodes(self, **kwargs: Any) -> Iterator[System]:
         return self.__api__.systems.list(**kwargs)

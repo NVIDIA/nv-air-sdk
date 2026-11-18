@@ -35,6 +35,13 @@ class MarketplaceDemoPublishAccessRecord(AirModel):
         status: Current status of the request
         publicly_published: Whether the marketplace demo should be publicly accessible
         prefer_public: Whether the requester prefers public over allowlist
+        preview: Whether the marketplace demo may be previewed — all authenticated
+            users can list and retrieve it, but only allowlisted orgs may provision
+            it. Preview requires restricted (non-public) publishing. None when read
+            from an Air deployment that does not yet report it.
+        prefer_preview: Whether the requester prefers preview publishing. Only takes
+            effect once the request is approved. None when read from an Air
+            deployment that does not yet report it.
         justification: Requester's reason for the request
         allowed_orgs_request_text: Free-text description of orgs to allowlist
         allowed_orgs: List of org UUIDs on the allowlist, or None.
@@ -57,6 +64,8 @@ class MarketplaceDemoPublishAccessRecord(AirModel):
     status: PAR_STATUS
     publicly_published: bool
     prefer_public: bool
+    preview: bool | None
+    prefer_preview: bool | None
     justification: str
     allowed_orgs_request_text: str
     allowed_orgs: list[str] | None
@@ -71,6 +80,7 @@ class MarketplaceDemoPublishAccessRecord(AirModel):
         *,
         publicly_published: bool = ...,
         allowed_orgs: list[str] = ...,
+        preview: bool = ...,
         **kwargs: Any,
     ) -> MarketplaceDemoPublishAccessRecord:
         """Approve this request.
@@ -97,6 +107,7 @@ class MarketplaceDemoPublishAccessRecord(AirModel):
         publicly_published: bool,
         allowed_orgs: list[str] = ...,
         publish_images: bool = ...,
+        preview: bool = ...,
         **kwargs: Any,
     ) -> MarketplaceDemoPublishAccessRecord:
         """Set visibility.
@@ -183,6 +194,7 @@ class MarketplaceDemoPublishAccessRecordEndpointAPI(
         record: MarketplaceDemoPublishAccessRecord | PrimaryKey,
         publicly_published: bool = ...,
         allowed_orgs: List[str] = ...,
+        preview: bool = ...,
         **kwargs: Any,
     ) -> MarketplaceDemoPublishAccessRecord:
         """Approve a pending publish access request.
@@ -193,6 +205,10 @@ class MarketplaceDemoPublishAccessRecordEndpointAPI(
                 When False, access is restricted to ``allowed_orgs``.
             allowed_orgs: List of org UUIDs that may access the marketplace demo.
                 Only meaningful when ``publicly_published`` is False.
+            preview: Whether to allow previewing the demo — all authenticated users
+                can list and retrieve it, but only ``allowed_orgs`` may provision it.
+                Requires ``publicly_published`` to be False. When omitted, defaults
+                to the record's ``prefer_preview`` value.
             **kwargs: Additional parameters
 
         Returns:
@@ -243,6 +259,7 @@ class MarketplaceDemoPublishAccessRecordEndpointAPI(
         publicly_published: bool,
         allowed_orgs: List[str] = ...,
         publish_images: bool = ...,
+        preview: bool = ...,
         **kwargs: Any,
     ) -> MarketplaceDemoPublishAccessRecord:
         """Update the visibility of a published marketplace demo.
@@ -256,6 +273,9 @@ class MarketplaceDemoPublishAccessRecordEndpointAPI(
             publish_images: When True, also publish referenced images owned by the
                 demo's organization that do not cover the demo's target audience.
                 Defaults to False.
+            preview: Whether to allow previewing the demo — all authenticated users
+                can list and retrieve it, but only ``allowed_orgs`` may provision it.
+                Requires ``publicly_published`` to be False.
             **kwargs: Additional parameters
 
         Returns:

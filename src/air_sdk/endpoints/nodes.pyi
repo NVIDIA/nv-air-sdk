@@ -8,20 +8,24 @@ Stub file for simulations endpoint type hints.
 
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Iterator, Literal, TypedDict
+from typing import Any, Iterator, List, Literal, TypedDict
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.bc.cloud_init import CloudInit
 from air_sdk.endpoints import UserConfig
 from air_sdk.endpoints.history import HistoryModelMixin
 from air_sdk.endpoints.images import Image
-from air_sdk.endpoints.interfaces import InterfaceEndpointAPI
+from air_sdk.endpoints.interfaces import Interface, InterfaceEndpointAPI
 from air_sdk.endpoints.links import LinkEndpointAPI
 from air_sdk.endpoints.node_instructions import NodeInstructionEndpointAPI
 from air_sdk.endpoints.services import Service, ServiceEndpointAPI
 from air_sdk.endpoints.simulations import Simulation
 from air_sdk.endpoints.systems import System
-from air_sdk.types import NodeManagementInterfaceInfo
+from air_sdk.types import (
+    InterfaceBreakoutEntry,
+    NodeBreakoutOption,
+    NodeManagementInterfaceInfo,
+)
 
 BootDevice = Literal['hd', 'network', 'cdrom']
 BootConfig = BootDevice | list[BootDevice]
@@ -370,6 +374,69 @@ class Node(HistoryModelMixin, AirModel):
 
         Example:
             >>> node.rebuild()
+        """
+        ...
+
+    def breakout_options(
+        self,
+        *,
+        interfaces: str | List[Interface | PrimaryKey] = ...,
+        include_single_option_ports: bool = ...,
+    ) -> dict[str, NodeBreakoutOption]:
+        """Get how this node's physical ports are split, and how else they may be.
+
+        Only nodes managed by a platform have breakout options. By default only
+        ports whose split can be changed are returned.
+
+        Args:
+            interfaces: Interface IDs, as a comma-separated string or a list
+                of Interface objects or IDs. Only the ports carrying at least
+                one of these interfaces are returned, each with all of its
+                interfaces. Every ID must be one of the node's own ports.
+            include_single_option_ports: Also return ports with a single
+                entry in `split_options`, whose split cannot be changed.
+                Defaults to `False`. Applied together with `interfaces`.
+
+        Returns:
+            A mapping keyed by each port's display name to its current split,
+            supported splits and interfaces
+
+        Example:
+            >>> options = node.breakout_options()
+            >>> options['swp1']['split']
+            '1x'
+            >>> options['swp1']['split_options']
+            ['1x', '2x', '4x']
+            >>>
+            >>> # Only the ports carrying these interfaces
+            >>> node.breakout_options(interfaces=[iface1, iface2])
+            >>> # Every port, including those whose split is fixed
+            >>> node.breakout_options(include_single_option_ports=True)
+        """
+        ...
+
+    def bulk_breakout(
+        self, *, interfaces: List[InterfaceBreakoutEntry]
+    ) -> List[Interface]:
+        """Re-split several of this node's physical ports at once.
+
+        Shorthand for `api.interfaces.bulk_breakout(node=node, ...)`.
+
+        Args:
+            interfaces: The ports to re-split, as `{'id': ..., 'split': ...}`
+                entries. `id` may be an Interface or an interface ID.
+
+        Returns:
+            Every interface the request created, in name order
+
+        Example:
+            >>> options = node.breakout_options()
+            >>> created = node.bulk_breakout(
+            ...     interfaces=[
+            ...         {'id': options['swp1']['interfaces'][0]['id'], 'split': '4x'},
+            ...         {'id': options['swp2']['interfaces'][0]['id'], 'split': '1x'},
+            ...     ]
+            ... )
         """
         ...
 
@@ -752,5 +819,38 @@ class NodeEndpointAPI(BaseEndpointAPI[Node]):
 
             >>> # Rebuild using node ID
             >>> api.nodes.rebuild(node='node-uuid-123')
+        """
+        ...
+
+    def breakout_options(
+        self,
+        *,
+        node: Node | PrimaryKey,
+        interfaces: str | List[Interface | PrimaryKey] = ...,
+        include_single_option_ports: bool = ...,
+    ) -> dict[str, NodeBreakoutOption]:
+        """Get how a node's physical ports are split, and how else they may be.
+
+        Only nodes managed by a platform have breakout options. By default only
+        ports whose split can be changed are returned.
+
+        Args:
+            node: The node object or node ID
+            interfaces: Interface IDs, as a comma-separated string or a list
+                of Interface objects or IDs. Only the ports carrying at least
+                one of these interfaces are returned, each with all of its
+                interfaces. Every ID must be one of the node's own ports.
+            include_single_option_ports: Also return ports with a single
+                entry in `split_options`, whose split cannot be changed.
+                Defaults to `False`. Applied together with `interfaces`.
+
+        Returns:
+            A mapping keyed by each port's display name (a label, not an
+            identifier) to its current split, supported splits and interfaces
+
+        Example:
+            >>> options = api.nodes.breakout_options(node=node)
+            >>> for port, option in options.items():
+            ...     print(port, option['split'], option['split_options'])
         """
         ...

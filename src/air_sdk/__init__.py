@@ -32,6 +32,9 @@ __all__ = [
     'DockerRunTmpfsParameter',
     'EmulationParams',
     'InstructionExportChoice',
+    'InterfaceBreakoutEntry',
+    'NodeBreakoutOption',
+    'NodeBreakoutOptionInterface',
     'OSImageCapabilities',
     'OSImageManifestPlatform',
     'OSImageManifestSpec',
@@ -76,6 +79,8 @@ __all__ = [
     'MarketplaceDemoEndpointAPI',
     'MarketplaceDemoApi',
     'MarketplaceDemoEndpointApi',
+    'MarketplaceDemoAccessRequest',
+    'MarketplaceDemoAccessRequestEndpointAPI',
     'MarketplaceDemoPublishAccessRecord',
     'MarketplaceDemoPublishAccessRecordEndpointAPI',
     'MarketplaceDemoTagEndpointAPI',
@@ -105,6 +110,9 @@ from air_sdk.types import (
     DockerRunTmpfsParameter,
     EmulationParams,
     InstructionExportChoice,
+    InterfaceBreakoutEntry,
+    NodeBreakoutOption,
+    NodeBreakoutOptionInterface,
     OSImageCapabilities,
     OSImageManifestPlatform,
     OSImageManifestSpec,
@@ -129,6 +137,8 @@ if TYPE_CHECKING:
         ImageShareEndpointAPI,
         InterfaceEndpointAPI,
         LinkEndpointAPI,
+        MarketplaceDemoAccessRequest,
+        MarketplaceDemoAccessRequestEndpointAPI,
         MarketplaceDemoEndpointAPI,
         MarketplaceDemoPublishAccessRecord,
         MarketplaceDemoPublishAccessRecordEndpointAPI,
@@ -385,6 +395,14 @@ class AirApi:
         return MarketplaceDemoPublishAccessRecordEndpointAPI(self)
 
     @property
+    def marketplace_demo_access_requests(
+        self,
+    ) -> MarketplaceDemoAccessRequestEndpointAPI:
+        from .endpoints import MarketplaceDemoAccessRequestEndpointAPI
+
+        return MarketplaceDemoAccessRequestEndpointAPI(self)
+
+    @property
     def marketplace_demo_tags(self) -> MarketplaceDemoTagEndpointAPI:
         from .endpoints import MarketplaceDemoTagEndpointAPI
 
@@ -579,6 +597,8 @@ from air_sdk.endpoints import (  # noqa: E402
     ImageShareEndpointAPI,
     InterfaceEndpointAPI,
     LinkEndpointAPI,
+    MarketplaceDemoAccessRequest,
+    MarketplaceDemoAccessRequestEndpointAPI,
     MarketplaceDemoEndpointAPI,
     MarketplaceDemoPublishAccessRecord,
     MarketplaceDemoPublishAccessRecordEndpointAPI,

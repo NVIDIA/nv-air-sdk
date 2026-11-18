@@ -12,8 +12,15 @@ from typing import Any, Iterator, List
 
 from air_sdk.air_model import AirModel, BaseEndpointAPI, PrimaryKey
 from air_sdk.endpoints.history import HistoryModelMixin
+from air_sdk.endpoints.marketplace_demo_access_requests import (
+    MarketplaceDemoAccessRequest,
+)
 from air_sdk.endpoints.simulations import Simulation
-from air_sdk.types import DEMO_SIMULATION_STATE, SimRequiredResources
+from air_sdk.types import (
+    ACCESS_REQUEST_STATUS,
+    DEMO_SIMULATION_STATE,
+    SimRequiredResources,
+)
 
 @dataclass(eq=False)
 class MarketplaceDemo(HistoryModelMixin, AirModel):
@@ -36,6 +43,21 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
             demo can be published.
         tags: The tags of the marketplace demo
         published: Whether the marketplace demo is published
+        publicly_published: Whether a published demo is publicly accessible
+        is_owned_by_client: Whether the demo is owned by the caller's org. When True,
+            the caller can publish or unpublish the demo. None when read from an Air
+            deployment that does not yet report it.
+        preview: Whether the demo is in preview mode — listed for all authenticated
+            users while provisioning stays restricted to the allowlisted orgs. Only
+            True for a published, restricted demo whose publish access record has
+            preview enabled. None when read from an Air deployment that does not yet
+            report it.
+        access_request_status: Status of the caller's org's access request for this
+            demo, or None when the org has not requested access.
+        can_provision: Whether the caller can provision a simulation from this demo.
+            A preview demo is listed for everyone but provisionable only by the
+            allowlisted orgs; when False, request access with ``request_access()``.
+            None when read from an Air deployment that does not yet report it.
         expected_resource_usage: Estimated resources required to provision the demo
         icon: The icon of the marketplace demo
         demo: Demo simulation to be used as a base for cloned simulations.
@@ -59,6 +81,10 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
     tags: list[str]
     published: bool
     publicly_published: bool
+    is_owned_by_client: bool | None
+    preview: bool | None
+    access_request_status: ACCESS_REQUEST_STATUS | None
+    can_provision: bool | None
     demo_simulation_state: DEMO_SIMULATION_STATE
     expected_resource_usage: SimRequiredResources
     description: str | None
@@ -114,6 +140,7 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
         allowed_orgs: list[PrimaryKey] = ...,
         justification: str = ...,
         publish_images: bool = ...,
+        preview: bool = ...,
         **kwargs: Any,
     ) -> None:
         """
@@ -134,6 +161,10 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
 
         Example:
             >>> marketplace_demo.publish()
@@ -172,6 +203,7 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
         prefer_public: bool = ...,
         allowed_orgs_request_text: str = ...,
         publish_images: bool = ...,
+        preview: bool = ...,
         publisher: str = ...,
         tags: list[str] = ...,
     ) -> MarketplaceDemo:
@@ -193,6 +225,10 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
             publisher: Optional publisher name to set on the demo when submitting
                 the request (e.g. NVIDIA, Google). Omitting the field leaves the
                 existing ``publisher`` unchanged.
@@ -234,6 +270,7 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
         prefer_public: bool,
         justification: str,
         publish_images: bool = ...,
+        preview: bool = ...,
     ) -> MarketplaceDemo:
         """Submit a request to change marketplace demo visibility to public or restricted.
 
@@ -246,6 +283,10 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
 
         Returns:
             MarketplaceDemo: the marketplace demo instance
@@ -265,6 +306,7 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
         justification: str,
         allowed_orgs_request_text: str,
         publish_images: bool = ...,
+        preview: bool = ...,
     ) -> MarketplaceDemo:
         """Submit a request to change the allowlist for this marketplace demo.
 
@@ -277,6 +319,10 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
 
         Returns:
             MarketplaceDemo: the marketplace demo instance
@@ -297,6 +343,47 @@ class MarketplaceDemo(HistoryModelMixin, AirModel):
 
         Example:
             >>> marketplace_demo.cancel_publish_access_record()
+        """
+        ...
+
+    def request_access(
+        self,
+        *,
+        company_name: str,
+        justification: str = ...,
+        **kwargs: Any,
+    ) -> MarketplaceDemoAccessRequest:
+        """Request access to this preview marketplace demo for your org.
+
+        See :meth:`MarketplaceDemoEndpointAPI.request_access`.
+
+        Args:
+            company_name: Required free-text company name for the requester. Not
+                derived from your Air organization.
+            justification: Optional explanation of why access is needed.
+
+        Returns:
+            MarketplaceDemoAccessRequest: your org's access request for this demo
+
+        Example:
+            >>> marketplace_demo.request_access(
+            ...     company_name='Acme Corp',
+            ...     justification='Evaluating for a customer deployment',
+            ... )
+        """
+        ...
+
+    def get_access_request(self, **kwargs: Any) -> MarketplaceDemoAccessRequest:
+        """Retrieve your org's access request for this marketplace demo.
+
+        See :meth:`MarketplaceDemoEndpointAPI.get_access_request`.
+
+        Returns:
+            MarketplaceDemoAccessRequest: your org's access request for this demo
+
+        Example:
+            >>> access_request = marketplace_demo.get_access_request()
+            >>> print(access_request.status)
         """
         ...
 
@@ -340,6 +427,8 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
     API_REQUEST_PUBLIC_PATH: str
     API_REQUEST_ALLOWLIST_CHANGE_PATH: str
     API_CANCEL_PUBLISH_ACCESS_RECORD_PATH: str
+    API_REQUEST_ACCESS_PATH: str
+    API_ACCESS_REQUEST_PATH: str
     API_MANAGE_PATH: str
     API_TIGHTEN_ORDER_PATH: str
     model: type[MarketplaceDemo]
@@ -410,6 +499,7 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
         tags: list[str] | _MISSING_TYPE = ...,
         published: bool | _MISSING_TYPE = ...,
         publicly_published: bool | _MISSING_TYPE = ...,
+        is_owned_by_client: bool | _MISSING_TYPE = ...,
         featured: bool | _MISSING_TYPE = ...,
         publisher: str | _MISSING_TYPE = ...,
         search: str | _MISSING_TYPE = ...,
@@ -426,6 +516,8 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
             tags: Filter by tags (matched case-insensitively)
             published: Filter by published status (true or false)
             publicly_published: Filter by publicly published status (true or false)
+            is_owned_by_client: Filter by whether your org owns the demo (true or
+                false)
             featured: Filter by whether the demo is featured (true or false). Featured
                 demos are listed before non-featured demos in the default ordering.
             publisher: Filter by the company or organization the demo is published
@@ -479,6 +571,7 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
         allowed_orgs: List[PrimaryKey] = ...,
         justification: str = ...,
         publish_images: bool = ...,
+        preview: bool = ...,
         **kwargs: Any,
     ) -> None:
         """
@@ -500,6 +593,10 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
 
         Returns:
             None
@@ -537,7 +634,9 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
         """
         Provision a simulation from a marketplace demo.
 
-        Creates a new simulation by cloning the demo simulation.
+        Creates a new simulation by cloning the demo simulation. Check the demo's
+        ``can_provision`` first: a restricted or preview demo can only be provisioned
+        by the allowlisted orgs, and the API rejects everyone else with a 403.
 
         Args:
             marketplace_demo: The marketplace demo to provision (object or ID)
@@ -565,6 +664,7 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
         prefer_public: bool = ...,
         allowed_orgs_request_text: str = ...,
         publish_images: bool = ...,
+        preview: bool = ...,
         publisher: str = ...,
         tags: List[str] = ...,
     ) -> MarketplaceDemo:
@@ -591,6 +691,10 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
             publisher: Optional publisher name to set on the demo when submitting
                 the request (e.g. NVIDIA, Google). Omitting the field leaves the
                 existing ``publisher`` unchanged.
@@ -643,6 +747,7 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
         prefer_public: bool,
         justification: str,
         publish_images: bool = ...,
+        preview: bool = ...,
     ) -> MarketplaceDemo:
         """Submit a request to change marketplace demo visibility to public or restricted.
 
@@ -660,6 +765,10 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
 
         Returns:
             MarketplaceDemo: the marketplace demo instance
@@ -680,6 +789,7 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
         justification: str,
         allowed_orgs_request_text: str,
         publish_images: bool = ...,
+        preview: bool = ...,
     ) -> MarketplaceDemo:
         """Submit a request to change the allowlist for a marketplace demo.
 
@@ -697,6 +807,10 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
                 referenced by the demo so they reach the same audience as the demo.
                 When ``false`` (default), the request is rejected with 400 if any
                 referenced image needs to be published to reach the demo audience.
+            preview: When ``true``, the demo is listed for all authenticated users
+                while provisioning stays restricted to the allow-list, and previewing
+                users may request access. Requires a restricted (non-public) outcome.
+                Defaults to ``false``.
 
         Returns:
             MarketplaceDemo: the marketplace demo instance
@@ -729,6 +843,75 @@ class MarketplaceDemoEndpointAPI(BaseEndpointAPI[MarketplaceDemo]):
             >>> api.marketplace_demos.cancel_publish_access_record(
             ...     marketplace_demo=marketplace_demo,
             ... )
+        """
+        ...
+
+    def request_access(
+        self,
+        *,
+        marketplace_demo: MarketplaceDemo | PrimaryKey,
+        company_name: str,
+        justification: str = ...,
+        **kwargs: Any,
+    ) -> MarketplaceDemoAccessRequest:
+        """Request access to a preview marketplace demo on behalf of your org.
+
+        A preview demo is visible to every authenticated user but can only be
+        provisioned by the orgs on its allow-list. Requesting access queues your org
+        for an admin to accept or deny. Re-requesting updates your org's existing
+        request rather than creating another, appending the new ``justification``
+        while the request is still open.
+
+        Raises ``AirUnexpectedResponse`` when the demo is not preview-restricted,
+        when your org owns it, when your org is already allow-listed, or when the
+        demo is not visible in the catalog.
+
+        Args:
+            marketplace_demo: Marketplace demo to request access to (MarketplaceDemo
+                instance or marketplace demo ID)
+            company_name: Required free-text company name for the requester. Not
+                derived from your Air organization.
+            justification: Optional explanation of why access is needed.
+            **kwargs: Additional parameters
+
+        Returns:
+            MarketplaceDemoAccessRequest: your org's access request for this demo
+
+        Example:
+            >>> api.marketplace_demos.request_access(
+            ...     marketplace_demo=marketplace_demo,
+            ...     company_name='Acme Corp',
+            ...     justification='Evaluating for a customer deployment',
+            ... )
+        """
+        ...
+
+    def get_access_request(
+        self,
+        *,
+        marketplace_demo: MarketplaceDemo | PrimaryKey,
+        **kwargs: Any,
+    ) -> MarketplaceDemoAccessRequest:
+        """Retrieve your org's access request for a marketplace demo.
+
+        Always scoped to the calling org, including for admins. Raises
+        ``AirUnexpectedResponse`` when the demo is not visible or your org has not
+        requested access. Use ``api.marketplace_demo_access_requests.list()`` to
+        review requests raised by other orgs.
+
+        Args:
+            marketplace_demo: Marketplace demo to read the access request for
+                (MarketplaceDemo instance or marketplace demo ID)
+            **kwargs: Additional query parameters
+
+        Returns:
+            MarketplaceDemoAccessRequest: your org's access request for this demo
+
+        Example:
+            >>> access_request = api.marketplace_demos.get_access_request(
+            ...     marketplace_demo=marketplace_demo,
+            ... )
+            >>> print(access_request.status)
         """
         ...
 
